@@ -1,0 +1,50 @@
+# Environment variables
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# AWS
+.aws/
+
+# Streamlit
+.streamlit/
+
+# Logs
+*.log
+streamlit*.log
+
+# Lambda packages
+*.zip
+lambda_function.zip
+strands_*.zip
+
+# Temporary files
+temp_*/
+response.json
+payload.txt
+test_payload.json
