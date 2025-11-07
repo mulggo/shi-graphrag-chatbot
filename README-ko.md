@@ -19,11 +19,11 @@
 - **FSS 온톨로지 그래프**: SPARQL 기반 의미론적 관계 (653개 트리플)
 - **실시간 탐색**: 대화형 노드 조작, 줌, 필터링
 
-### 📊 **데이터 스키마 탐색기**
-- **실시간 쿼리 실행**: 실시간 openCypher 및 SPARQL 쿼리 실행
-- **Knowledge Base 검색**: 관련성 점수가 포함된 직접 검색
-- **스키마 분석**: 포괄적인 데이터 구조 문서화
-- **안전 제어**: 읽기 전용 쿼리 검증 및 실행 제한
+### 📊 **데이터 구조 안내서**
+- **시스템 개요**: 포괄적인 데이터 아키텍처 문서화
+- **Neptune Analytics**: 7,552개 노드와 11,949개 엣지를 가진 GraphRAG 구조
+- **Neptune DB**: 653개 트리플과 42개 클래스를 가진 SPARQL 온톨로지
+- **시각적 통계**: 실시간 메트릭 및 데이터 분포
 
 ### 💬 **지능형 채팅 시스템**
 - **AWS Bedrock 통합**: 소스 속성이 포함된 고급 AI 기반 응답
@@ -43,9 +43,9 @@ graph TB
     E --> F[Neptune Analytics]
     E --> G[Neptune SPARQL]
     
-    A --> H[Data Schema Explorer]
-    H --> I[KB Search]
-    H --> J[Live Queries]
+    A --> H[Data Structure Guide]
+    H --> I[Data Statistics]
+    H --> J[Schema Documentation]
     
     C --> K[AWS Bedrock Agent]
     K --> L[Knowledge Base]
@@ -108,7 +108,7 @@ streamlit run app.py
 ship-firefighting-chatbot/
 ├── 📱 프론트엔드 & 핵심
 │   ├── app.py                      # 메인 Streamlit 애플리케이션
-│   ├── data_schema_explorer.py     # 실시간 데이터 탐색 도구
+│   ├── data_structure_guide.py     # 데이터 아키텍처 문서화
 │   ├── knowledge_graph.py          # Neptune Analytics GraphRAG
 │   ├── fss_full_graph.py          # FSS SPARQL 온톨로지 그래프
 │   └── requirements.txt            # Python 의존성
@@ -181,19 +181,18 @@ ship-firefighting-chatbot/
    - **호버 세부정보**: 노드 정보 확인
    - **동적 레이아웃**: 물리 기반 위치 조정
 
-### 📊 데이터 스키마 탐색기
+### 📊 데이터 구조 안내서
 
-1. **탐색기 이동**: 사이드바에서 "📊 데이터 스키마 탐색기" 선택
-2. **4개 탭 탐색**:
-   - **📚 Knowledge Base**: 메타데이터 및 검색 통계
-   - **🕸️ Neptune Analytics**: 그래프 스키마 및 openCypher 쿼리
-   - **🔗 Neptune SPARQL**: RDF 온톨로지 및 SPARQL 쿼리
-   - **📋 데이터 샘플**: 실제 데이터 예시 및 품질 메트릭
+1. **안내서 이동**: 사이드바에서 "📊 데이터 구조 안내서" 선택
+2. **3개 탭 탐색**:
+   - **📊 전체 현황**: Neptune Analytics와 Neptune DB 개요
+   - **📚 GraphRAG**: Neptune Analytics 구조 및 통계
+   - **🔥 GraphDB**: Neptune SPARQL 온톨로지 세부사항
 
-3. **실시간 쿼리 실행**:
-   - **사전 구축 예시**: 예시 쿼리에서 "▶️ 실행" 클릭
-   - **사용자 정의 쿼리**: 직접 쿼리 작성 및 실행
-   - **안전 검증**: 자동 읽기 전용 쿼리 확인
+3. **시스템 아키텍처 확인**:
+   - **데이터 모델**: 노드, 엣지, 라벨, 프로퍼티 이해
+   - **통계**: 두 그래프 시스템의 실시간 메트릭
+   - **문서화**: 포괄적인 스키마 정보
 
 ## ⚙️ 구성
 
