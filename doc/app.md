@@ -30,6 +30,12 @@ The application operates in two primary modes:
 - **Session Management**: Persistent conversation context
 - **Korean/English Support**: Bilingual interface and responses
 
+### 4. Data Structure Guide
+- **System Architecture**: Comprehensive documentation of data models
+- **Neptune Analytics**: GraphRAG structure with 7,552 nodes and 11,949 edges
+- **Neptune DB**: SPARQL ontology with 653 triples and 42 classes
+- **Visual Statistics**: Real-time metrics and data distribution across systems
+
 ## Core Components
 
 ### Multi-Agent System Integration
@@ -90,6 +96,12 @@ if st.session_state.get('show_knowledge_graph', False):
 - **FSS Ontology Graph**: SPARQL-based semantic relationships
 - **Interactive Controls**: Zoom, pan, node selection
 - **Performance Optimized**: 900px height with smooth rendering
+
+### Data Structure Guide (`data_structure_guide.py`)
+- **Three-Tab Interface**: Overview, GraphRAG, and GraphDB sections
+- **System Documentation**: Detailed explanation of data models
+- **Real-time Statistics**: Current node, edge, and triple counts
+- **Architecture Diagrams**: Visual representation of data relationships
 
 ### Reference Display (`ui/reference_display.py`)
 - **Enhanced Metadata**: Source attribution and confidence scores
