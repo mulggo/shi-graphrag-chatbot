@@ -1,0 +1,128 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFront distribution for Streamlit application'
+
+Parameters:
+  StreamlitOriginDomain:
+    Type: String
+    Default: '35.162.142.5'
+    Description: 'EC2 instance public IP or domain for Streamlit app'
+  
+  StreamlitPort:
+    Type: String
+    Default: '8501'
+    Description: 'Streamlit application port'
+
+Resources:
+  # CloudFront Distribution
+  StreamlitCloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: 'CloudFront distribution for Ship Firefighting Rules Chatbot'
+        Enabled: true
+        HttpVersion: http2
+        PriceClass: PriceClass_100  # Use only North America and Europe edge locations
+        
+        # Origins
+        Origins:
+          - Id: StreamlitOrigin
+            DomainName: !Ref StreamlitOriginDomain
+            OriginPath: ''
+            CustomOriginConfig:
+              HTTPPort: !Ref StreamlitPort
+              HTTPSPort: 443
+              OriginProtocolPolicy: http-only  # Streamlit runs on HTTP
+        
+        # Default Cache Behavior
+        DefaultCacheBehavior:
+          TargetOriginId: StreamlitOrigin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+            - PUT
+            - POST
+            - PATCH
+            - DELETE
+          CachedMethods:
+            - GET
+            - HEAD
+          Compress: true
+          
+          # Cache Policy for Streamlit (minimal caching for dynamic content)
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # CachingDisabled
+          OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf  # CORS-S3Origin
+          
+          # Forward headers needed for Streamlit WebSocket connections
+          ForwardedValues:
+            QueryString: true
+            Headers:
+              - Host
+              - Origin
+              - Referer
+              - User-Agent
+              - X-Forwarded-For
+              - X-Forwarded-Proto
+              - X-Forwarded-Port
+        
+        # Additional Cache Behaviors for Streamlit static assets
+        CacheBehaviors:
+          - PathPattern: '/static/*'
+            TargetOriginId: StreamlitOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+            CachedMethods:
+              - GET
+              - HEAD
+            Compress: true
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6  # CachingOptimized
+            
+          - PathPattern: '/_stcore/*'
+            TargetOriginId: StreamlitOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+              - PUT
+              - POST
+              - PATCH
+              - DELETE
+            CachedMethods:
+              - GET
+              - HEAD
+            Compress: true
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # CachingDisabled
+        
+        # Custom Error Pages
+        CustomErrorResponses:
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: '/'
+            ErrorCachingMinTTL: 0
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: '/'
+            ErrorCachingMinTTL: 0
+
+Outputs:
+  CloudFrontDistributionId:
+    Description: 'CloudFront Distribution ID'
+    Value: !Ref StreamlitCloudFrontDistribution
+    Export:
+      Name: !Sub '${AWS::StackName}-DistributionId'
+  
+  CloudFrontDomainName:
+    Description: 'CloudFront Distribution Domain Name'
+    Value: !GetAtt StreamlitCloudFrontDistribution.DomainName
+    Export:
+      Name: !Sub '${AWS::StackName}-DomainName'
+  
+  CloudFrontURL:
+    Description: 'CloudFront Distribution URL'
+    Value: !Sub 'https://${StreamlitCloudFrontDistribution.DomainName}'
+    Export:
+      Name: !Sub '${AWS::StackName}-URL'

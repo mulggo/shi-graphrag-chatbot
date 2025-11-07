@@ -1,0 +1,20 @@
+[server]
+# CloudFront 호환성을 위한 설정
+headless = true
+runOnSave = false
+port = 8501
+enableCORS = true
+enableXsrfProtection = false
+
+[browser]
+gatherUsageStats = false
+serverAddress = "0.0.0.0"
+
+[client]
+# WebSocket 연결 최적화
+caching = false
+displayEnabled = true
+showErrorDetails = true
+
+[logger]
+level = "info"

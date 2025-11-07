@@ -1,0 +1,44 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Minimal CloudFront for Streamlit - WebSocket optimized'
+
+Parameters:
+  StreamlitOrigin:
+    Type: String
+    Default: 'ec2-35-162-142-5.us-west-2.compute.amazonaws.com'
+    Description: 'EC2 instance public DNS name'
+
+Resources:
+  StreamlitDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: 'Streamlit App - WebSocket Optimized'
+        Enabled: true
+        
+        Origins:
+          - Id: streamlit
+            DomainName: !Ref StreamlitOrigin
+            CustomOriginConfig:
+              HTTPPort: 8501
+              OriginProtocolPolicy: http-only
+        
+        DefaultCacheBehavior:
+          TargetOriginId: streamlit
+          ViewerProtocolPolicy: allow-all  # Allow HTTP for WebSocket
+          AllowedMethods: [DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT]
+          CachedMethods: [GET, HEAD]
+          
+          # Disable all caching for Streamlit
+          DefaultTTL: 0
+          MaxTTL: 0
+          MinTTL: 0
+          
+          ForwardedValues:
+            QueryString: true
+            Headers: ['*']
+            Cookies:
+              Forward: all
+
+Outputs:
+  URL:
+    Value: !Sub 'https://${StreamlitDistribution.DomainName}'

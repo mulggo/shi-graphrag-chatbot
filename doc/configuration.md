@@ -1,95 +1,95 @@
-# Configuration Documentation
+# Multi-Agent System Configuration Documentation
 
 ## Overview
 
-This document describes the configuration files and settings used in the Ship Firefighting Rules Chatbot project.
+This document describes the configuration system for the multi-agent Ship Firefighting Rules Chatbot, including agent definitions, AWS resources, and application settings.
 
-## Configuration Files
+## Core Configuration Files
 
-### 1. strands_tool_schema.json
+### 1. config/agents.yaml (Primary Configuration)
 
-**Purpose**: OpenAPI schema definition for the Strands ReAct search tool integration with Bedrock Agent.
+**Purpose**: Central configuration file defining all agents, their capabilities, and AWS resource mappings.
 
-#### Schema Structure
-```json
-{
-  "openapi": "3.0.0",
-  "info": {
-    "title": "Strands ReAct Search",
-    "version": "1.0.0",
-    "description": "Advanced ReAct search tool"
-  }
-}
+#### Agent Configuration Structure
+```yaml
+agents:
+  firefighting:
+    display_name: "선박 소방 규정"
+    description: "선박 소방 시스템 및 SOLAS 규정 전문가"
+    module_path: "agents.firefighting_agent.agent"
+    bedrock_agent_id: "WT3ZJ25XCL"
+    bedrock_alias_id: "3RWZZLJDY1"
+    knowledge_base_id: "ZGBA1R5CS0"
+    enabled: true
+    ui_config:
+      icon: "🚢"
+      color: "#FF6B6B"
+      topics:
+        - "고정식 소화 시스템"
+        - "휴대용 소화기"
+        - "배수 시스템"
+        - "안전 구역"
+        - "SOLAS 규정"
+
+global_config:
+  aws_region: "us-west-2"
+  default_language: "ko"
+  session_timeout: 3600
+  max_message_length: 4000
+  enable_tracing: true
 ```
 
-#### API Endpoint Definition
-- **Path**: `/search`
-- **Method**: POST
-- **Operation ID**: `strandsReactSearch`
-- **Description**: "Use this when default search fails to find relevant information"
+#### Configuration Parameters
+- **display_name**: Human-readable agent name for UI
+- **description**: Agent purpose and capabilities
+- **module_path**: Python import path to agent implementation
+- **bedrock_agent_id**: AWS Bedrock Agent identifier
+- **bedrock_alias_id**: Bedrock Agent alias for versioning
+- **knowledge_base_id**: Associated Knowledge Base identifier
+- **enabled**: Agent activation status
+- **ui_config**: User interface customization settings
 
-#### Request Schema
-```json
-{
-  "type": "object",
-  "properties": {
-    "query": {
-      "type": "string",
-      "description": "Search query"
-    }
-  },
-  "required": ["query"]
-}
+#### Adding New Agents
+1. Define agent in `config/agents.yaml`
+2. Implement agent class in specified module path
+3. Configure AWS Bedrock Agent and Knowledge Base
+4. Test agent functionality through AgentManager
+
+### 2. .streamlit/config.toml (Streamlit Configuration)
+
+**Purpose**: Streamlit application configuration for optimal performance and compatibility.
+
+#### Configuration Structure
+```toml
+[server]
+headless = true
+runOnSave = false
+port = 8501
+enableCORS = true
+enableXsrfProtection = false
+
+[browser]
+gatherUsageStats = false
+serverAddress = "0.0.0.0"
+
+[client]
+caching = false
+displayEnabled = true
+showErrorDetails = true
+
+[logger]
+level = "info"
 ```
 
-#### Response Schema
-```json
-{
-  "type": "object",
-  "properties": {
-    "result": {
-      "type": "string",
-      "description": "Search result"
-    }
-  }
-}
-```
+#### Key Settings
+- **headless**: Runs without browser auto-opening
+- **enableCORS**: Enables cross-origin requests for CloudFront
+- **enableXsrfProtection**: Disabled for API compatibility
+- **caching**: Disabled for real-time updates
+- **serverAddress**: Binds to all interfaces for deployment
 
-#### Usage in Bedrock Agent
-1. Upload schema to Bedrock Agent Action Group
-2. Associate with Lambda function
-3. Configure as tool for enhanced search capabilities
-
-### 2. lambda_trust_policy.json
-
-**Purpose**: IAM trust policy for Lambda function execution role.
-
-#### Policy Structure
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "lambda.amazonaws.com"
-      },
-      "Action": "sts:AssumeRole"
-    }
-  ]
-}
-```
-
-#### Key Components
-- **Version**: Policy language version (2012-10-17)
-- **Effect**: Allow access
-- **Principal**: AWS Lambda service
-- **Action**: Assume role permission
-
-#### Usage
-1. Create IAM role for Lambda function
-2. Attach this trust policy to the role
-3. Add necessary execution policies (Bedrock, S3, CloudWatch)
+#### CloudFront Compatibility
+These settings optimize Streamlit for CloudFront deployment and WebSocket functionality.
 
 ### 3. requirements.txt (Lambda Package)
 

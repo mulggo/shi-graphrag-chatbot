@@ -2,15 +2,22 @@
 
 ## Overview
 
-This project includes several AWS Lambda functions that provide enhanced search capabilities using the Strands framework and direct AWS service integration.
+This project includes AWS Lambda functions that were part of the original architecture. With the transition to the multi-agent system, Lambda functions are now optional components used for specialized processing tasks.
 
-## Lambda Functions
+## Current Status
 
-### 1. lambda_function.py (Main Strands Tool)
+**Note**: The multi-agent architecture primarily uses direct AWS Bedrock Agent integration. Lambda functions remain available for:
+- Custom tool implementations
+- Advanced processing workflows
+- Legacy compatibility
+
+## Available Lambda Functions
+
+### 1. lambda_function.py (Strands ReAct Tool)
 
 **Location**: `lambda_package/lambda_function.py`
 
-**Purpose**: Primary Lambda function implementing Strands ReAct pattern for advanced search capabilities.
+**Purpose**: Strands framework implementation for ReAct pattern search (legacy component).
 
 #### Features
 - **Strands Agent Integration**: Uses Strands framework for ReAct (Reasoning and Acting) pattern
