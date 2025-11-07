@@ -1,217 +1,221 @@
+"""
+확장 가능한 멀티 에이전트 Streamlit 애플리케이션
+새로운 아키텍처로 리팩토링된 메인 앱
+"""
 import streamlit as st
-import boto3
-import json
 import uuid
-from datetime import datetime
-from botocore.exceptions import ClientError
+from core.agent_manager import AgentManager
+from ui.agent_selector import AgentSelector
+from ui.chat_interface import ChatInterface
+from ui.reference_display import ReferenceDisplay
+from ui.sidebar import Sidebar
 
 # 페이지 설정
 st.set_page_config(
-    page_title="선박 Firefighting 규칙 챗봇",
+    page_title="선박 규정 전문가 시스템",
     page_icon="🚢",
     layout="wide"
 )
 
-# 제목
-st.title("🚢 선박 Firefighting 규칙 챗봇")
-st.markdown("선박 설계시 firefighting 관련 규칙을 문의하세요")
-
-# AWS 클라이언트 초기화
+# 전역 매니저 초기화
 @st.cache_resource
-def get_bedrock_client():
-    return boto3.client('bedrock-agent-runtime', region_name='us-west-2')
+def get_agent_manager():
+    return AgentManager()
 
 @st.cache_resource
-def get_s3_client():
-    return boto3.client('s3', region_name='us-west-2')
-
-client = get_bedrock_client()
-s3_client = get_s3_client()
-
-# S3 이미지 다운로드 함수
-def get_s3_image(s3_uri):
-    try:
-        # S3 URI 파싱 (s3://bucket/key)
-        if s3_uri.startswith('s3://'):
-            parts = s3_uri[5:].split('/', 1)
-            bucket = parts[0]
-            key = parts[1] if len(parts) > 1 else ''
-            
-            # S3에서 이미지 다운로드
-            response = s3_client.get_object(Bucket=bucket, Key=key)
-            return response['Body'].read()
-    except Exception as e:
-        st.error(f"S3 이미지 로드 실패: {e}")
-        return None
-    return None
+def get_ui_components(_agent_manager):
+    return {
+        'agent_selector': AgentSelector(_agent_manager),
+        'chat_interface': ChatInterface(_agent_manager),
+        'reference_display': ReferenceDisplay(),
+        'sidebar': Sidebar(_agent_manager)
+    }
 
 # 세션 상태 초기화
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "session_id" not in st.session_state:
-    st.session_state.session_id = str(uuid.uuid4())
-
-# 채팅 히스토리 표시
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        if message["role"] == "assistant" and "references" in message:
-            # 참조 정보가 있는 어시스턴트 메시지
-            references = message["references"]
-            if references:
-                enhanced_content = message["content"]
-                for i, ref in enumerate(references, 1):
-                    if 'SOLAS' in ref['source_file']:
-                        enhanced_content = enhanced_content.replace(
-                            'SOLAS', f'SOLAS[[{i}]](#ref-{i}-hist)', 1
-                        )
-                st.markdown(enhanced_content)
-                
-                # 참조 정보 간략 표시
-                if len(references) > 0:
-                    ref_summary = ", ".join([f"[{i}] {ref['source_file']}" for i, ref in enumerate(references, 1)])
-                    st.caption(f"📚 참조: {ref_summary}")
-            else:
-                st.markdown(message["content"])
-        else:
-            st.markdown(message["content"])
-
-# 사용자 입력
-if prompt := st.chat_input("선박 firefighting 규칙에 대해 질문하세요"):
-    # 사용자 메시지 추가
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
-    
-    # Agent 응답
-    with st.chat_message("assistant"):
-        with st.spinner("답변을 생성하고 있습니다..."):
-            try:
-                response = client.invoke_agent(
-                    agentId='H5YNZKKNSW',
-                    agentAliasId='FD3LV7TEN4',
-                    sessionId=st.session_state.session_id,
-                    inputText=prompt,
-                    enableTrace=True
-                )
-                
-                completion = ""
-                references = []
-                
-                for event in response.get("completion", []):
-                    if 'chunk' in event:
-                        chunk = event["chunk"]
-                        completion += chunk["bytes"].decode()
-                    
-                    # 참조 정보 추출
-                    if 'trace' in event:
-                        trace_event = event.get("trace")
-                        if 'trace' in trace_event:
-                            trace_data = trace_event['trace']
-                            if 'orchestrationTrace' in trace_data:
-                                orch_trace = trace_data['orchestrationTrace']
-                                if 'observation' in orch_trace:
-                                    obs = orch_trace['observation']
-                                    if 'knowledgeBaseLookupOutput' in obs:
-                                        kb_lookup = obs['knowledgeBaseLookupOutput']
-                                        if 'retrievedReferences' in kb_lookup:
-                                            refs = kb_lookup['retrievedReferences']
-                                            for ref in refs:
-                                                ref_data = {
-                                                    'source_file': ref.get('metadata', {}).get('x-amz-bedrock-kb-source-uri', '').split('/')[-1],
-                                                    'page_number': ref.get('metadata', {}).get('x-amz-bedrock-kb-document-page-number', 0),
-                                                    'ocr_text': ref.get('metadata', {}).get('x-amz-bedrock-kb-description', ''),
-                                                    'image_uri': ref.get('metadata', {}).get('x-amz-bedrock-kb-byte-content-source', '')
-                                                }
-                                                # 빈 참조 필터링: OCR 텍스트가 있고 페이지 번호가 0이 아닌 경우만 추가
-                                                if ref_data['ocr_text'] and ref_data['page_number'] > 0:
-                                                    references.append(ref_data)
-                
-                # 기본 응답 표시
-                st.markdown(completion)
-                
-                # 참조 정보 표시
-                if references:
-                    st.markdown("---")
-                    st.markdown("**📚 참조 문서**")
-                    
-                    for i, ref in enumerate(references, 1):
-                        with st.expander(f"[{i}] {ref['source_file']} (페이지 {ref['page_number']})", expanded=False):
-                            # OCR 텍스트 표시
-                            st.subheader("📄 OCR 추출 텍스트")
-                            if ref['ocr_text']:
-                                st.text_area(
-                                    "원문 내용", 
-                                    ref['ocr_text'], 
-                                    height=300, 
-                                    key=f"ref_text_{i}",
-                                    help="PDF에서 OCR로 추출된 원문 텍스트입니다."
-                                )
-                            else:
-                                st.info("텍스트 정보가 없습니다.")
-                            
-                            # 이미지 표시
-                            st.subheader("🖼️ 원본 이미지")
-                            if ref['image_uri']:
-                                try:
-                                    image_data = get_s3_image(ref['image_uri'])
-                                    if image_data:
-                                        st.image(
-                                            image_data, 
-                                            caption=f"페이지 {ref['page_number']} 원본 이미지 (클릭하면 확대)", 
-                                            use_container_width=True
-                                        )
-                                    else:
-                                        st.warning("이미지 로드에 실패했습니다.")
-                                except Exception as e:
-                                    st.error(f"이미지 로드 실패: {e}")
-                            else:
-                                st.info("이미지 정보가 없습니다.")
-                            
-                            # 메타데이터 정보
-                            st.markdown("**📋 문서 정보**")
-                            st.json({
-                                "파일명": ref['source_file'],
-                                "페이지": ref['page_number'],
-                                "텍스트 길이": f"{len(ref['ocr_text'])} 문자"
-                            })
-                
-                # 응답을 세션에 저장 (참조 정보 포함)
-                response_with_refs = {
-                    "role": "assistant", 
-                    "content": completion,
-                    "references": references if references else []
-                }
-                st.session_state.messages.append(response_with_refs)
-                
-            except Exception as e:
-                st.error(f"오류가 발생했습니다: {str(e)}")
-
-# 사이드바에 정보 표시
-with st.sidebar:
-    st.markdown("### 📋 사용 정보")
-    st.markdown(f"**세션 ID:** `{st.session_state.session_id[:8]}...`")
-    st.markdown(f"**메시지 수:** {len(st.session_state.messages)}")
-    
-    if st.button("새 세션 시작"):
+def initialize_session():
+    if "messages" not in st.session_state:
         st.session_state.messages = []
+    if "session_id" not in st.session_state:
         st.session_state.session_id = str(uuid.uuid4())
-        st.rerun()
+    if "selected_agent" not in st.session_state:
+        st.session_state.selected_agent = None
+
+def main():
+    initialize_session()
     
-    st.markdown("---")
-    st.markdown("### 🚢 지원 주제")
-    st.markdown("""
-    - 고정식 소화 시스템
-    - 휴대용 소화기
-    - 배수 시스템
-    - 안전 구역
-    - SOLAS 규정
-    """)
+    # 매니저 및 UI 컴포넌트 초기화
+    agent_manager = get_agent_manager()
+    ui_components = get_ui_components(agent_manager)
     
-    # st.markdown("---")
-    # st.markdown("### 🔗 참조 기능")
-    # st.markdown("""
-    # - 답변에 [[1]], [[2]] 번호 표시
-    # - 번호 클릭시 참조 문서로 이동
-    # - OCR 추출 원문 텍스트 제공
-    # - S3 원본 이미지 위치 정보
-    # """)
+    # 메인 제목
+    st.title("🚢 선박 소방 규정 챗봇")
+    st.markdown("선박 소방 시스템 및 SOLAS 규정에 대해 질문하세요")
+    
+    # 데이터 스키마 안내서 표시
+    if st.session_state.get('show_data_schema', False):
+        st.markdown("---")
+        st.markdown("### 📊 데이터 구조 안내서")
+        
+        try:
+            from data_structure_guide import schema_explorer
+            schema_explorer.render_schema_explorer()
+        except Exception as e:
+            st.error(f"데이터 스키마 로드 실패: {e}")
+        
+
+    
+    # 채팅 인터페이스 (지식 그래프나 데이터 스키마가 표시되지 않을 때만)
+    elif not st.session_state.get('show_knowledge_graph', False):
+        # 기본 에이전트 설정 (소방 규정)
+        selected_agent = "firefighting"
+        st.session_state.selected_agent = selected_agent
+        
+        # 채팅 인터페이스
+        ui_components['chat_interface'].render_chat_history()
+        
+        # 사용자 입력 처리
+        if prompt := st.chat_input("질문을 입력하세요..."):
+            # 사용자 메시지 추가
+            st.session_state.messages.append({
+                "role": "user", 
+                "content": prompt,
+                "agent": selected_agent
+            })
+            
+            # 채팅 메시지 표시
+            with st.chat_message("user"):
+                st.markdown(prompt)
+            
+            # AI 응답 생성
+            with st.chat_message("assistant"):
+                with st.spinner("답변을 생성하고 있습니다..."):
+                    result = agent_manager.route_message(
+                        selected_agent, 
+                        prompt, 
+                        st.session_state.session_id
+                    )
+                    
+                    if result.get("success"):
+                        # 응답 표시
+                        st.markdown(result["content"])
+                        
+                        # 참조 정보 표시
+                        references = result.get("references", [])
+                        if references:
+                            ui_components['reference_display'].render_references(references)
+                        
+                        # 세션에 저장
+                        st.session_state.messages.append({
+                            "role": "assistant",
+                            "content": result["content"],
+                            "references": references,
+                            "agent": selected_agent
+                        })
+                    else:
+                        st.error(f"오류: {result.get('error', '알 수 없는 오류')}")
+    
+    # 지식 그래프 표시
+    if st.session_state.get('show_knowledge_graph', False):
+        selected_graph_type = st.session_state.get('selected_graph_type', '모든 문서의 GraphRAG')
+        
+        st.markdown("---")
+        st.markdown(f"### 🕸️ {selected_graph_type}")
+        
+        # 그래프 타입별 설명 추가
+        if selected_graph_type == "🕸️ 모든 문서의 GraphRAG":
+            st.markdown("""
+            **Neptune Analytics 기반 문서 관계 시각화**
+            
+            이 그래프는 선박 소방 규정 문서들 간의 복잡한 관계를 시각적으로 보여줍니다. 
+            각 노드는 문서나 핵심 개념을 나타내며, 엣지는 이들 간의 연결 관계를 표현합니다.
+            
+            - 📊 **전체 노드**: 7,552개, **전체 관계**: 11,949개
+              - **CONTAINS**: 9,418개 (Chunk → Entity)
+              - **FROM**: 2,531개 (Chunk → DocumentId)
+            - 🔍 **표시 범위**: 최대 2,000개 노드, 3,000개 엣지
+            - 🎨 **색상 구분**: Document(청록), Entity(파랑), 기타(주황)
+            - 🖱️ **상호작용**: 노드 클릭, 드래그, 줌 기능 지원
+            """)
+        elif selected_graph_type == "FSS 문서 GraphDB":
+            st.markdown("""
+            **Neptune SPARQL 기반 FSS 온톨로지 시각화**
+            
+            FSS(Fire Safety Systems) 규정의 구조화된 온톨로지를 보여주는 지식 그래프입니다.
+            SPARQL 쿼리를 통해 실시간으로 데이터를 조회하여 시각화합니다.
+            
+            - 🔥 **FSS 챕터**: 17개 챕터별 구조화
+            - 📋 **총 클래스**: 42개 온톨로지 클래스
+            - 🏗️ **총 인스턴스**: 186개 구체적 인스턴스
+            - ➡️ **방향성**: 화살표로 관계 방향 표시
+            """)
+        elif selected_graph_type == "📊 데이터 스키마 탐색기":
+            st.markdown("""
+            **Knowledge Base 및 Neptune DB 스키마 분석**
+            
+            이 도구는 시스템에서 사용하는 모든 데이터 소스의 내부 구조와 스키마를 탐색할 수 있게 해줍니다.
+            개발자와 데이터 분석가를 위한 기술적 세부사항을 제공합니다.
+            
+            - 📚 **Knowledge Base**: 임베딩 벡터, 메타데이터 구조
+            - 🕸️ **Neptune Analytics**: 그래프 스키마, 노드/엣지 타입
+            - 🔗 **Neptune SPARQL**: RDF 온톨로지, 클래스 계층구조
+            - 📋 **데이터 샘플**: 실제 데이터 구조 예시
+            """)
+        
+        with st.spinner(f"{selected_graph_type}를 로드하고 있습니다..."):
+            try:
+                import streamlit.components.v1 as components
+                
+                if selected_graph_type == "🕸️ 모든 문서의 GraphRAG":
+                    from knowledge_graph import create_neptune_graph
+                    
+                    # 지식 그래프 생성
+                    net = create_neptune_graph()
+                    
+                    # HTML 생성 및 표시
+                    html_string = net.generate_html()
+                    components.html(html_string, height=900)  # 더 큰 높이
+                    
+                elif selected_graph_type == "FSS 문서 GraphDB":
+                    from fss_full_graph import get_full_ontology, create_full_graph
+                    
+                    # FSS 온톨로지 데이터 가져오기
+                    data = get_full_ontology()
+                    
+                    if data and data['results']['bindings']:
+                        st.success(f"✅ {len(data['results']['bindings'])}개 트리플 로드 완료")
+                        
+                        # FSS 그래프 생성
+                        net, node_count, edge_count = create_full_graph(data)
+                        st.info(f"📊 노드: {node_count}개, 엣지: {edge_count}개")
+                        
+                        # HTML 생성 및 표시 (GraphRAG와 동일한 방식)
+                        html_string = net.generate_html()
+                        components.html(html_string, height=900)  # 더 큰 높이
+                    else:
+                        st.error("❌ FSS 데이터를 가져올 수 없습니다.")
+                        st.info("Neptune SPARQL 엔드포인트 연결을 확인해주세요.")
+                
+
+                
+                # 닫기 버튼
+                col1, col2, col3 = st.columns([1, 1, 1])
+                with col2:
+                    if st.button("❌ 지식 그래프 닫기", use_container_width=True):
+                        st.session_state.show_knowledge_graph = False
+                        st.session_state.selected_graph_type = None
+                        st.rerun()
+                        
+            except Exception as e:
+                st.error(f"지식 그래프 로드 실패: {e}")
+                st.info("Neptune 연결을 확인해주세요.")
+                if st.button("❌ 닫기"):
+                    st.session_state.show_knowledge_graph = False
+                    st.session_state.selected_graph_type = None
+                    st.rerun()
+    
+    # 사이드바
+    with st.sidebar:
+        ui_components['sidebar'].render_sidebar()
+
+if __name__ == "__main__":
+    main()

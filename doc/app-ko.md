@@ -1,75 +1,107 @@
-# 애플리케이션 문서 (app.py)
+# 멀티 에이전트 애플리케이션 문서 (app.py)
 
 ## 개요
 
-메인 Streamlit 애플리케이션(`app.py`)은 선박 소화 규칙 챗봇을 위한 대화형 웹 인터페이스를 제공합니다. AWS Bedrock Agent와 통합하여 선박 소화 규정에 대한 지능적인 응답을 제공합니다.
+메인 Streamlit 애플리케이션(`app.py`)은 멀티 에이전트 선박 소화 규칙 챗봇 시스템을 위한 통합 인터페이스를 제공합니다. 조건부 UI 모드, 지식 그래프 시각화, 지능형 에이전트 라우팅을 특징으로 합니다.
+
+## 아키텍처 개요
+
+애플리케이션은 두 가지 주요 모드로 작동합니다:
+1. **채팅 모드**: 전문 에이전트와의 대화형 Q&A
+2. **그래프 모드**: 지식 그래프 시각화 및 탐색
 
 ## 주요 기능
 
-### 1. Streamlit 웹 인터페이스
-- **페이지 구성**: 선박 이모지(🚢)와 와이드 레이아웃으로 구성
-- **한국어 지원**: 완전한 한국어 인터페이스
-- **반응형 디자인**: 다양한 화면 크기에 최적화
+### 1. 멀티 에이전트 인터페이스
+- **에이전트 매니저 통합**: 중앙화된 에이전트 라우팅 및 관리
+- **구성 기반**: YAML 구성에서 로드되는 에이전트
+- **조건부 UI**: 그래프 시각화 중 채팅 인터페이스 숨김
+- **에이전트 선택**: 다중 지식 베이스 옵션 (bda-neptune, bda-neptune-2)
 
-### 2. AWS 통합
-- **Bedrock Agent Runtime**: 지능적인 응답을 위한 AWS Bedrock Agent 연결
-- **S3 클라이언트**: 원본 문서 이미지 다운로드 및 표시
-- **세션 관리**: UUID 기반 세션을 사용한 대화 컨텍스트 유지
+### 2. 지식 그래프 시각화
+- **이중 그래프 유형**: GraphRAG (Neptune Analytics) 및 FSS 온톨로지 (SPARQL)
+- **대화형 시각화**: 완전한 상호작용이 가능한 900px 높이
+- **실시간 전환**: 그래프 유형 간 원활한 전환
+- **성능 최적화**: 2,000개 이상의 노드를 효율적으로 처리
 
-### 3. 참조 시스템
-- **문서 참조**: 소스 문서 정보 추출 및 표시
-- **OCR 텍스트 표시**: PDF 문서에서 추출된 텍스트 표시
-- **이미지 뷰어**: S3의 원본 PDF 페이지 이미지 표시
-- **메타데이터 정보**: 페이지 번호를 포함한 문서 메타데이터 제공
+### 3. 향상된 채팅 시스템
+- **멀티 에이전트 지원**: 적절한 전문 에이전트로 쿼리 라우팅
+- **참조 통합**: 고급 문서 참조 추출 및 표시
+- **세션 관리**: 지속적인 대화 컨텍스트
+- **한국어/영어 지원**: 이중 언어 인터페이스 및 응답
 
 ## 핵심 구성 요소
 
-### AWS 클라이언트 초기화
+### 멀티 에이전트 시스템 통합
 ```python
+# 에이전트 매니저 초기화
 @st.cache_resource
-def get_bedrock_client():
-    return boto3.client('bedrock-agent-runtime', region_name='us-west-2')
+def get_agent_manager():
+    return AgentManager()
 
+# UI 구성 요소 초기화  
 @st.cache_resource
-def get_s3_client():
-    return boto3.client('s3', region_name='us-west-2')
+def get_ui_components(_agent_manager):
+    return {
+        'agent_selector': AgentSelector(_agent_manager),
+        'chat_interface': ChatInterface(_agent_manager),
+        'reference_display': ReferenceDisplay(),
+        'sidebar': Sidebar(_agent_manager)
+    }
 ```
 
 ### 세션 상태 관리
-- `messages`: 대화 기록 저장
-- `session_id`: 각 채팅 세션의 고유 식별자
+- `messages`: 에이전트 속성이 포함된 대화 기록
+- `session_id`: UUID 기반 세션 식별자
+- `selected_agent`: 현재 활성 에이전트
+- `show_knowledge_graph`: 그래프 시각화 상태
+- `selected_graph_type`: 활성 그래프 유형
 
-### 참조 처리
-애플리케이션은 Bedrock Agent의 추적 이벤트를 처리하여 다음을 추출합니다:
-- 소스 파일명
-- 페이지 번호
-- OCR 추출 텍스트
-- S3 이미지 URI
+### 조건부 UI 로직
+```python
+# 채팅 모드 (그래프가 활성화되지 않은 경우)
+if not st.session_state.get('show_knowledge_graph', False):
+    # 채팅 인터페이스 표시
+    ui_components['chat_interface'].render_chat_history()
+
+# 그래프 모드 (그래프가 선택된 경우)
+if st.session_state.get('show_knowledge_graph', False):
+    # 지식 그래프 시각화 표시
+    selected_graph_type = st.session_state.get('selected_graph_type')
+```
 
 ## 사용자 인터페이스 구성 요소
 
-### 메인 채팅 인터페이스
-- **채팅 입력**: 사용자 질의를 위한 텍스트 입력
-- **메시지 표시**: 역할 기반 스타일링으로 대화 기록 표시
-- **참조 링크**: 응답에서 클릭 가능한 참조 번호
+### 통합 사이드바 (`ui/sidebar.py`)
+- **시스템 정보**: 에이전트 상태 및 가용성
+- **GraphRAG 섹션**: 지식 베이스 선택 (bda-neptune, bda-neptune-2)
+- **지식 그래프 선택기**: 라디오 버튼을 통한 그래프 유형 선택
+- **에이전트 정보**: 현재 에이전트 기능 및 지원 주제
+- **세션 관리**: 세션 제어 및 정보
 
-### 참조 표시
-- **확장 가능한 섹션**: 접을 수 있는 확장기에 각 참조 표시
-- **OCR 텍스트 영역**: 추출된 내용을 보여주는 스크롤 가능한 텍스트 영역
-- **이미지 표시**: 줌 기능이 있는 전체 너비 이미지 표시
-- **메타데이터 JSON**: 문서 정보의 구조화된 표시
+### 채팅 인터페이스 (`ui/chat_interface.py`)
+- **조건부 표시**: 그래프 모드가 비활성화된 경우에만 표시
+- **에이전트 속성**: 담당 에이전트로 태그된 메시지
+- **참조 통합**: 원활한 참조 표시
+- **멀티 에이전트 기록**: 에이전트 전환 간 대화 컨텍스트
 
-### 사이드바 정보
-- **세션 정보**: 현재 세션 ID 및 메시지 수
-- **새 세션 버튼**: 대화를 재설정하고 새 세션 ID 생성
-- **지원 주제**: 사용 가능한 질의 주제 목록
-- **사용 지침**: 시스템 사용 방법에 대한 간단한 가이드
+### 지식 그래프 뷰어
+- **GraphRAG 시각화**: 2,000개 노드, 3,000개 엣지를 가진 Neptune Analytics
+- **FSS 온톨로지 그래프**: SPARQL 기반 의미론적 관계
+- **대화형 제어**: 줌, 팬, 노드 선택
+- **성능 최적화**: 부드러운 렌더링을 위한 900px 높이
+
+### 참조 표시 (`ui/reference_display.py`)
+- **향상된 메타데이터**: 소스 속성 및 신뢰도 점수
+- **이미지 통합**: S3 호스팅 원본 문서 이미지
+- **OCR 텍스트 추출**: 검색 가능한 문서 내용
+- **다중 형식 지원**: PDF, 이미지 및 텍스트 참조
 
 ## 구성
 
-### AWS 리소스
-- **Agent ID**: `H5YNZKKNSW`
-- **Agent Alias ID**: `FD3LV7TEN4`
+### 현재 AWS 리소스
+- **Bedrock Agent ID**: `WT3ZJ25XCL`
+- **Agent Alias ID**: `3RWZZLJDY1`
 - **리전**: `us-west-2`
 
 ### Streamlit 구성
