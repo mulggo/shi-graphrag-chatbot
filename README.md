@@ -19,11 +19,11 @@ A sophisticated multi-agent GraphRAG-powered chatbot system for ship firefightin
 - **FSS Ontology Graph**: SPARQL-based semantic relationships (653 triples)
 - **Real-time Exploration**: Interactive node manipulation, zoom, and filtering
 
-### 📊 **Data Schema Explorer**
-- **Live Query Execution**: Real-time openCypher and SPARQL query execution
-- **Knowledge Base Search**: Direct search with relevance scoring
-- **Schema Analysis**: Comprehensive data structure documentation
-- **Safety Controls**: Read-only query validation and execution limits
+### 📊 **Data Structure Guide**
+- **System Overview**: Comprehensive data architecture documentation
+- **Neptune Analytics**: GraphRAG structure with 7,552 nodes and 11,949 edges
+- **Neptune DB**: SPARQL ontology with 653 triples and 42 classes
+- **Visual Statistics**: Real-time metrics and data distribution
 
 ### 💬 **Intelligent Chat System**
 - **AWS Bedrock Integration**: Advanced AI-powered responses with source attribution
@@ -43,9 +43,9 @@ graph TB
     E --> F[Neptune Analytics]
     E --> G[Neptune SPARQL]
     
-    A --> H[Data Schema Explorer]
-    H --> I[KB Search]
-    H --> J[Live Queries]
+    A --> H[Data Structure Guide]
+    H --> I[Data Statistics]
+    H --> J[Schema Documentation]
     
     C --> K[AWS Bedrock Agent]
     K --> L[Knowledge Base]
@@ -108,7 +108,7 @@ The application will be available at `http://localhost:8501`
 ship-firefighting-chatbot/
 ├── 📱 Frontend & Core
 │   ├── app.py                      # Main Streamlit application
-│   ├── data_schema_explorer.py     # Real-time data exploration tool
+│   ├── data_structure_guide.py     # Data architecture documentation
 │   ├── knowledge_graph.py          # Neptune Analytics GraphRAG
 │   ├── fss_full_graph.py          # FSS SPARQL ontology graph
 │   └── requirements.txt            # Python dependencies
@@ -181,19 +181,18 @@ English:
    - **Hover Details**: View node information
    - **Dynamic Layout**: Physics-based positioning
 
-### 📊 Data Schema Explorer
+### 📊 Data Structure Guide
 
-1. **Navigate to Explorer**: Select "📊 데이터 스키마 탐색기" in sidebar
-2. **Explore 4 Tabs**:
-   - **📚 Knowledge Base**: Metadata and search statistics
-   - **🕸️ Neptune Analytics**: Graph schema and openCypher queries
-   - **🔗 Neptune SPARQL**: RDF ontology and SPARQL queries
-   - **📋 Data Samples**: Real data examples and quality metrics
+1. **Navigate to Guide**: Select "📊 데이터 구조 안내서" in sidebar
+2. **Explore 3 Tabs**:
+   - **📊 전체 현황**: Overview of both Neptune Analytics and Neptune DB
+   - **📚 GraphRAG**: Neptune Analytics structure and statistics
+   - **🔥 GraphDB**: Neptune SPARQL ontology details
 
-3. **Execute Live Queries**:
-   - **Pre-built Examples**: Click "▶️ 실행" on example queries
-   - **Custom Queries**: Write and execute your own queries
-   - **Safety Validation**: Automatic read-only query checking
+3. **View System Architecture**:
+   - **Data Models**: Understand nodes, edges, labels, and properties
+   - **Statistics**: Real-time metrics for both graph systems
+   - **Documentation**: Comprehensive schema information
 
 ## ⚙️ Configuration
 
