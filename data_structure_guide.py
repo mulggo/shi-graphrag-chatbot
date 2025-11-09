@@ -31,9 +31,9 @@ class DataSchemaExplorer:
     
     def _render_kb_explanation(self):
         """Knowledge Base 쉬운 설명"""
-        st.markdown("## 📚 문서 저장소 (Knowledge Base)")
+        st.markdown("## 📚 GraphRAG (Knowledge Base)")
         st.markdown("""
-        **문서 저장소는 마치 도서관과 같습니다.**
+        **Knowledge Base는 마치 도서관과 같습니다.**
         선박 소방 규정 문서들을 컴퓨터가 빠르게 찾을 수 있도록 정리해둔 곳입니다.
         """)
         
@@ -55,19 +55,186 @@ class DataSchemaExplorer:
             4. **점수 계산** → 관련도 점수 부여
             5. **결과 제공** → 답변과 원본 이미지
             """)
+        
+        st.markdown("---")
+        
+        # 11개 문서 목록
+        st.markdown("## 📄 저장된 문서 목록")
+        st.markdown("**선박 소방 규정 관련 11개 문서**")
+        
+        documents = [
+            {"번호": "1", "문서명": "FSS 합본", "설명": "국제 화재 안전 시스템 코드 (Fire Safety Systems Code)"},
+            {"번호": "2", "문서명": "SOLAS Chapter II-2", "설명": "해상인명안전협약 - 구조, 화재 방호, 화재 탐지 및 소화"},
+            {"번호": "3", "문서명": "SOLAS 2017 Insulation penetration", "설명": "SOLAS 단열재 관통 규정"},
+            {"번호": "4", "문서명": "IGC Code", "설명": "국제 가스 운반선 코드 (International Gas Carrier Code)"},
+            {"번호": "5", "문서명": "DNV-RU-SHIP Pt4 Ch6", "설명": "DNV 선급 규칙 - Part 4 Chapter 6"},
+            {"번호": "6", "문서명": "DNV-RU-SHIP Pt6 Ch5 Sec4", "설명": "DNV 선급 규칙 - Part 6 Chapter 5 Section 4"},
+            {"번호": "7", "문서명": "Design guidance_Support", "설명": "설계 가이드 - 지지 구조"},
+            {"번호": "8", "문서명": "Design guidance_Spoolcutting", "설명": "설계 가이드 - 스풀 절단"},
+            {"번호": "9", "문서명": "Design guidance_hull penetration", "설명": "설계 가이드 - 선체 관통부"},
+            {"번호": "10", "문서명": "Piping practice_Support", "설명": "배관 실무 - 지지 구조"},
+            {"번호": "11", "문서명": "Piping practice_hull penetration", "설명": "배관 실무 - 선체 관통부"}
+        ]
+        
+        df_docs = pd.DataFrame(documents)
+        st.dataframe(df_docs, use_container_width=True, hide_index=True)
+        
+        st.markdown("---")
+        
+        # 그래프 구조 설명
+        st.markdown("## 🕸️ GraphRAG 구조")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("### 📊 노드(Node) 구성")
+            st.markdown("""
+            **총 7,552개 노드**
+            - **Document (11개)**: 원본 문서
+            - **Chunk (2,531개)**: 문서 조각
+            - **Entity (5,010개)**: 추출된 개념
+            """)
+            
+            st.markdown("#### 🏷️ 라벨(Label) 종류")
+            labels = [
+                {"라벨": "Document", "개수": "11개", "설명": "원본 PDF 문서"},
+                {"라벨": "Chunk", "개수": "2,531개", "설명": "문서의 작은 조각"},
+                {"라벨": "Entity", "개수": "5,010개", "설명": "추출된 핵심 개념"}
+            ]
+            df_labels = pd.DataFrame(labels)
+            st.dataframe(df_labels, use_container_width=True, hide_index=True)
+        
+        with col2:
+            st.markdown("### 🔗 엣지(Edge) 구성")
+            st.markdown("""
+            **총 11,949개 관계**
+            - **CONTAINS (9,418개)**: Chunk → Entity
+            - **FROM (2,531개)**: Chunk → Document
+            """)
+            
+            st.markdown("#### 🔗 엣지 유형")
+            edges = [
+                {"관계": "CONTAINS", "개수": "9,418개", "설명": "Chunk가 Entity를 포함"},
+                {"관계": "FROM", "개수": "2,531개", "설명": "Chunk가 Document로부터 생성됨"}
+            ]
+            df_edges = pd.DataFrame(edges)
+            st.dataframe(df_edges, use_container_width=True, hide_index=True)
+        
+        st.markdown("---")
+        
+        # 샘플 데이터
+        st.markdown("## 📝 샘플 데이터")
+        
+        tab1, tab2, tab3 = st.tabs(["청크 예시", "엔티티 예시", "관계 예시"])
+        
+        with tab1:
+            st.markdown("### ✂️ 청크(Chunk) 샘플")
+            st.markdown("**문서를 검색 가능한 작은 조각으로 분할**")
+            
+            chunks = [
+                {
+                    "청크 ID": "chunk_001",
+                    "원본 문서": "SOLAS Chapter II-2",
+                    "내용 미리보기": "고정식 CO2 소화 시스템은 보호 구역의 총 용적에 대해...",
+                    "페이지": "15"
+                },
+                {
+                    "청크 ID": "chunk_002",
+                    "원본 문서": "IMO FSS Code",
+                    "내용 미리보기": "화재 감지 시스템은 연기, 열, 불꽃을 자동으로 감지하여...",
+                    "페이지": "23"
+                },
+                {
+                    "청크 ID": "chunk_003",
+                    "원본 문서": "DNV-RU-SHIP",
+                    "내용 미리보기": "스프링클러 헤드는 기관실 천장에 3m 간격으로 설치...",
+                    "페이지": "42"
+                }
+            ]
+            df_chunks = pd.DataFrame(chunks)
+            st.dataframe(df_chunks, use_container_width=True, hide_index=True)
+        
+        with tab2:
+            st.markdown("### 🏷️ 엔티티(Entity) 샘플")
+            st.markdown("**문서에서 추출된 핵심 개념과 용어**")
+            
+            entities = [
+                {
+                    "엔티티": "CO2 System",
+                    "타입": "소화 시스템",
+                    "출현 빈도": "127회",
+                    "관련 문서": "SOLAS, FSS Code, DNV"
+                },
+                {
+                    "엔티티": "Fire Detection",
+                    "타입": "감지 시스템",
+                    "출현 빈도": "89회",
+                    "관련 문서": "SOLAS, Fire Detection Systems"
+                },
+                {
+                    "엔티티": "Sprinkler Head",
+                    "타입": "장비 구성요소",
+                    "출현 빈도": "64회",
+                    "관련 문서": "DNV, Sprinkler Systems"
+                },
+                {
+                    "엔티티": "Engine Room",
+                    "타입": "선박 구역",
+                    "출현 빈도": "156회",
+                    "관련 문서": "SOLAS, DNV, FSS Code"
+                },
+                {
+                    "엔티티": "Foam Concentrate",
+                    "타입": "소화 약제",
+                    "출현 빈도": "43회",
+                    "관련 문서": "Foam Systems, FSS Code"
+                }
+            ]
+            df_entities = pd.DataFrame(entities)
+            st.dataframe(df_entities, use_container_width=True, hide_index=True)
+        
+        with tab3:
+            st.markdown("### 🔗 관계(Relationship) 샘플")
+            st.markdown("**노드 간의 연결 관계**")
+            
+            relationships = [
+                {
+                    "출발": "SOLAS Chapter II-2",
+                    "관계": "CONTAINS",
+                    "도착": "chunk_001",
+                    "설명": "문서가 청크를 포함"
+                },
+                {
+                    "출발": "chunk_001",
+                    "관계": "HAS_ENTITY",
+                    "도착": "CO2 System",
+                    "설명": "청크에 엔티티 포함"
+                },
+                {
+                    "출발": "CO2 System",
+                    "관계": "RELATES_TO",
+                    "도착": "Engine Room",
+                    "설명": "CO2 시스템이 기관실에 설치"
+                },
+                {
+                    "출발": "Fire Detection",
+                    "관계": "TRIGGERS",
+                    "도착": "CO2 System",
+                    "설명": "화재 감지가 소화 시스템 작동"
+                },
+                {
+                    "출발": "Sprinkler Head",
+                    "관계": "PART_OF",
+                    "도착": "Sprinkler System",
+                    "설명": "스프링클러 헤드는 시스템의 일부"
+                }
+            ]
+            df_relationships = pd.DataFrame(relationships)
+            st.dataframe(df_relationships, use_container_width=True, hide_index=True)
 
     def _render_fss_ontology(self):
         """FSS 온톨로지 상세 설명"""
         st.markdown("# 🔥 FSS 온톨로지 구조")
-        
-        # 핵심 목적
-        st.markdown("## 🎯 핵심 목적")
-        st.info("""
-        **IMO FSS Code의 디지털 지식화**
-        
-        국제해사기구(IMO)의 화재 안전 시스템 코드를 구조화된 지식 그래프로 변환하여, 
-        선박 설계자, 검사관, 규제 당국이 검색 가능하고 연결된 형태로 활용할 수 있게 합니다.
-        """)
         
         # 데이터 규모
         st.markdown("## 📊 데이터 규모")
@@ -156,32 +323,6 @@ Specification
 "사양 값"
             """)
         
-        # 활용 가치
-        st.markdown("## 🎯 활용 가치")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("### 👥 사용자별 혜택")
-            benefits = [
-                "**선박 설계자**: 규정 준수 자동 검증",
-                "**검사관**: 체계적인 검사 체크리스트", 
-                "**규제 당국**: 일관된 규정 해석",
-                "**연구자**: 규정 간 관계 분석"
-            ]
-            for benefit in benefits:
-                st.markdown(f"- {benefit}")
-        
-        with col2:
-            st.markdown("### 🚀 기술적 장점")
-            advantages = [
-                "**자동화**: 규정 검색 및 적용 자동화",
-                "**일관성**: 표준화된 용어 및 구조",
-                "**확장성**: 새로운 규정 쉽게 추가",
-                "**연결성**: 관련 규정 자동 발견"
-            ]
-            for advantage in advantages:
-                st.markdown(f"- {advantage}")
     
     def _render_data_overview(self):
         """전체 데이터 현황"""        
