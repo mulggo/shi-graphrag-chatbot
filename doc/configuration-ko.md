@@ -115,8 +115,8 @@ pip install -r requirements.txt
 ### Bedrock Agent 구성
 
 #### Agent 설정
-- **Agent ID**: `H5YNZKKNSW`
-- **Agent Alias ID**: `FD3LV7TEN4`
+- **Agent ID**: `WT3ZJ25XCL`
+- **Agent Alias ID**: `3RWZZLJDY1`
 - **리전**: `us-west-2`
 - **모델**: Claude 3.5 Sonnet
 

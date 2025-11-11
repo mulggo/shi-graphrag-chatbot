@@ -205,8 +205,8 @@ agents:
   firefighting:
     display_name: "선박 소방 규정"
     description: "선박 소방 시스템 및 SOLAS 규정 전문가"
-    bedrock_agent_id: "H5YNZKKNSW"
-    bedrock_alias_id: "FD3LV7TEN4"
+    bedrock_agent_id: "WT3ZJ25XCL"
+    bedrock_alias_id: "3RWZZLJDY1"
     knowledge_base_id: "ZGBA1R5CS0"
     region: "us-west-2"
     enabled: true
@@ -217,8 +217,8 @@ agents:
 ```bash
 # .env
 AWS_REGION=us-west-2
-BEDROCK_AGENT_ID=H5YNZKKNSW
-BEDROCK_ALIAS_ID=FD3LV7TEN4
+BEDROCK_AGENT_ID=WT3ZJ25XCL
+BEDROCK_ALIAS_ID=3RWZZLJDY1
 KNOWLEDGE_BASE_ID=ZGBA1R5CS0
 NEPTUNE_GRAPH_ID=g-gqisj8edd6
 NEPTUNE_ENDPOINT=your-neptune-endpoint

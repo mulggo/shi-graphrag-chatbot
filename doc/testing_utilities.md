@@ -22,8 +22,8 @@ This project includes several utility scripts for testing and debugging the chat
 def test_agent_with_trace():
     # Invokes agent with trace enabled
     response = client.invoke_agent(
-        agentId='H5YNZKKNSW',
-        agentAliasId='FD3LV7TEN4',
+        agentId='WT3ZJ25XCL',
+        agentAliasId='3RWZZLJDY1',
         sessionId=session_id,
         inputText='선박 설계시 firefighting 규칙에 대해 알려주세요',
         enableTrace=True
