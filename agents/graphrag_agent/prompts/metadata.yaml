@@ -1,0 +1,65 @@
+# GraphRAG 멀티 에이전트 프롬프트 메타데이터
+# 버전: 1.0.0
+
+version: "1.0.0"
+last_updated: "2025-01-11"
+anthropic_principles_compliant: true
+
+document_coverage:
+  total_documents: 11
+  covered_documents:
+    - "FSS 합본"
+    - "SOLAS Chapter II-2"
+    - "SOLAS 2017 Insulation penetration"
+    - "IGC Code"
+    - "DNV-RU-SHIP Pt4 Ch6"
+    - "DNV-RU-SHIP Pt6 Ch5 Sec4"
+    - "Design guidance_Support"
+    - "Design guidance_Spoolcutting"
+    - "Design guidance_hull penetration"
+    - "Piping practice_Support"
+    - "Piping practice_hull penetration"
+
+example_distribution:
+  query_analysis:
+    total_examples: 11
+    factual: 6
+    multi_doc: 3
+    comparative: 2
+  kb_retrieval:
+    total_examples: 2
+    single_doc: 1
+    multi_doc: 1
+  response_synthesis:
+    total_examples: 3
+    regulation_only: 1
+    multi_category: 2
+
+anthropic_principles:
+  - name: "명확하고 구체적인 지시"
+    description: "모호하지 않고 명시적이며 작업별로 구체적인 지시 제공"
+    implemented: true
+  - name: "충분한 맥락 제공"
+    description: "배경 정보, 관련 제약 조건, 작업 목적, 대상 청중 포함"
+    implemented: true
+  - name: "예시 사용 (멀티샷)"
+    description: "원하는 형식, 톤, 복잡도를 보여주는 여러 입출력 예제 포함"
+    implemented: true
+  - name: "Claude가 생각하게 하기 (사고 연쇄)"
+    description: "중간 추론 과정을 보여주도록 하는 지시 포함"
+    implemented: true
+  - name: "XML 태그 구조화"
+    description: "프롬프트 구성 요소를 명확히 구분하는 XML 태그 사용"
+    implemented: true
+  - name: "Claude에게 역할 부여"
+    description: "각 에이전트에게 명시적인 역할과 전문성 수준 할당"
+    implemented: true
+  - name: "Claude의 응답 미리 채우기"
+    description: "원하는 출력 형식을 설정하기 위해 응답의 일부를 미리 채움"
+    implemented: true
+  - name: "복잡한 프롬프트 연결"
+    description: "복잡한 작업을 순차적 하위 작업으로 분해"
+    implemented: true
+  - name: "긴 컨텍스트 활용"
+    description: "확장된 컨텍스트 윈도우를 활용하여 여러 문서 처리"
+    implemented: true
