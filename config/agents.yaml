@@ -2,62 +2,24 @@
 # 새로운 에이전트 추가 시 이 파일만 수정하면 됨
 
 agents:
-  firefighting:
-    display_name: "선박 소방 규정"
-    description: "선박 소방 시스템 및 SOLAS 규정 전문가"
-    module_path: "agents.firefighting_agent.agent"
+  plan_execute:
+    display_name: "Plan-Execute Agent"
+    description: "AWS IDP 패턴 기반 단순화된 GraphRAG 에이전트"
+    module_path: "agents.plan_execute_agent"
     bedrock_agent_id: "WT3ZJ25XCL"
     bedrock_alias_id: "3RWZZLJDY1"
-    knowledge_base_id: "ZGBA1R5CS0"
-    lambda_function_name: "firefighting-lambda"
+    knowledge_base_id: "CDPB5AI6BH"
+    bedrock_model_id: "anthropic.claude-3-5-sonnet-20240620-v1:0"
+    reranker_model_arn: "arn:aws:bedrock:us-west-2::foundation-model/cohere.rerank-v3-5:0"
     enabled: true
     ui_config:
-      icon: "🚢"
-      color: "#FF6B6B"
+      icon: "⚡"
+      color: "#2ECC71"
       topics:
-        - "고정식 소화 시스템"
-        - "휴대용 소화기"
-        - "배수 시스템"
-        - "안전 구역"
-        - "SOLAS 규정"
-  
-  safety:
-    display_name: "선박 안전 규정"
-    description: "선박 안전 장비 및 절차 전문가"
-    module_path: "agents.safety_agent.agent"
-    bedrock_agent_id: "SAFETY_AGENT_ID"  # 실제 ID로 교체 필요
-    bedrock_alias_id: "SAFETY_ALIAS_ID"  # 실제 ID로 교체 필요
-    knowledge_base_id: "SAFETY_KB_ID"    # 실제 ID로 교체 필요
-    lambda_function_name: "safety-lambda"
-    enabled: false  # 아직 구현되지 않음
-    ui_config:
-      icon: "⚠️"
-      color: "#FFA500"
-      topics:
-        - "구명 장비"
-        - "비상 절차"
-        - "안전 훈련"
-        - "개인 보호 장비"
-        - "위험 물질 관리"
-  
-  navigation:
-    display_name: "항해 규정"
-    description: "항해 규칙 및 해상 교통 전문가"
-    module_path: "agents.navigation_agent.agent"
-    bedrock_agent_id: "NAV_AGENT_ID"     # 실제 ID로 교체 필요
-    bedrock_alias_id: "NAV_ALIAS_ID"     # 실제 ID로 교체 필요
-    knowledge_base_id: "NAV_KB_ID"       # 실제 ID로 교체 필요
-    lambda_function_name: "navigation-lambda"
-    enabled: false  # 아직 구현되지 않음
-    ui_config:
-      icon: "🧭"
-      color: "#4ECDC4"
-      topics:
-        - "충돌 방지 규칙"
-        - "항로 표지"
-        - "통신 절차"
-        - "기상 대응"
-        - "항만 규정"
+        - "Plan-Execute 패턴"
+        - "2단계 워크플로우"
+        - "단순화된 구조"
+        - "AWS IDP 기반"
 
 # 글로벌 설정
 global_config:
@@ -66,3 +28,12 @@ global_config:
   session_timeout: 3600  # 1시간
   max_message_length: 4000
   enable_tracing: true
+  
+# 에이전트 비교 설정
+comparison_config:
+  enable_ab_test: false
+  default_agents: ["plan_execute"]
+  performance_metrics:
+    - "response_time"
+    - "reference_count"
+    - "answer_quality"

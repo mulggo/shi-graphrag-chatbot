@@ -21,6 +21,9 @@ class AgentConfig:
     lambda_function_name: Optional[str] = None
     ui_config: Optional[Dict] = None
     enabled: bool = True
+    bedrock_model_id: Optional[str] = None
+    lambda_function_names: Optional[Dict] = None
+    reranker_model_arn: Optional[str] = None
 
 class AgentManager:
     """에이전트 관리자 - 모든 에이전트의 등록, 관리, 라우팅 담당"""
@@ -33,11 +36,26 @@ class AgentManager:
     
     def load_agents(self):
         """설정 파일에서 에이전트 정보 로드"""
+        import os
+        from dotenv import load_dotenv
+        
+        # 환경변수 로드
+        load_dotenv()
+        
         try:
             with open(self.config_path, 'r', encoding='utf-8') as f:
                 config = yaml.safe_load(f)
             
             for agent_name, agent_config in config.get('agents', {}).items():
+                # lambda_function_names에서 환경변수 치환
+                if 'lambda_function_names' in agent_config:
+                    lambda_names = agent_config['lambda_function_names']
+                    if isinstance(lambda_names, dict):
+                        for key, value in lambda_names.items():
+                            if isinstance(value, str) and value.startswith('${') and value.endswith('}'):
+                                env_var = value[2:-1]  # ${ 와 } 제거
+                                lambda_names[key] = os.getenv(env_var, '')
+                
                 self.agents[agent_name] = AgentConfig(
                     name=agent_name,
                     **agent_config
@@ -57,7 +75,12 @@ class AgentManager:
         try:
             agent_config = self.agents[agent_name]
             module = importlib.import_module(agent_config.module_path)
-            agent_class = getattr(module, 'Agent')
+            
+            # Plan-Execute Agent는 PlanExecuteAgent 클래스 사용
+            if agent_name == 'plan_execute':
+                agent_class = getattr(module, 'PlanExecuteAgent')
+            else:
+                agent_class = getattr(module, 'Agent')
             
             self.agent_instances[agent_name] = agent_class(agent_config)
             
@@ -72,7 +95,7 @@ class AgentManager:
         """특정 에이전트 인스턴스 반환"""
         return self.agent_instances.get(agent_name)
     
-    def route_message(self, agent_name: str, message: str, session_id: str) -> Dict:
+    def route_message(self, agent_name: str, message: str, session_id: str, kb_id: str = None) -> Dict:
         """메시지를 해당 에이전트로 라우팅"""
         agent = self.get_agent(agent_name)
         if not agent:
@@ -82,6 +105,10 @@ class AgentManager:
             }
         
         try:
+            # Plan-Execute Agent인 경우 KB ID 설정
+            if agent_name == 'plan_execute' and kb_id:
+                agent.kb_id = kb_id
+            
             return agent.process_message(message, session_id)
         except Exception as e:
             return {

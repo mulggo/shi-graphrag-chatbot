@@ -1,3 +1,0 @@
-"""
-Ship firefighting regulations agent
-"""

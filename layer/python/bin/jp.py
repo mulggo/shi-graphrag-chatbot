@@ -1,4 +1,4 @@
-#!/usr/bin/python3.11
+#!/home/ec2-user/workshops/shi-graphrag-chatbot/venv/bin/python3.11
 
 import sys
 import json

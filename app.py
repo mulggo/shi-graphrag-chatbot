@@ -17,12 +17,10 @@ st.set_page_config(
     layout="wide"
 )
 
-# 전역 매니저 초기화
-@st.cache_resource
+# 전역 매니저 초기화 (캐시 비활성화)
 def get_agent_manager():
     return AgentManager()
 
-@st.cache_resource
 def get_ui_components(_agent_manager):
     return {
         'agent_selector': AgentSelector(_agent_manager),
@@ -38,7 +36,13 @@ def initialize_session():
     if "session_id" not in st.session_state:
         st.session_state.session_id = str(uuid.uuid4())
     if "selected_agent" not in st.session_state:
-        st.session_state.selected_agent = None
+        st.session_state.selected_agent = 'plan_execute'  # Plan-Execute Agent를 기본값으로
+    if "selected_kb_id" not in st.session_state:
+        st.session_state.selected_kb_id = 'CDPB5AI6BH'  # 기본 KB
+    if "previous_agent" not in st.session_state:
+        st.session_state.previous_agent = None
+    if "previous_kb_id" not in st.session_state:
+        st.session_state.previous_kb_id = None
 
 def main():
     initialize_session()
@@ -66,9 +70,18 @@ def main():
     
     # 채팅 인터페이스 (지식 그래프나 데이터 스키마가 표시되지 않을 때만)
     elif not st.session_state.get('show_knowledge_graph', False):
-        # 기본 에이전트 설정 (소방 규정)
-        selected_agent = "firefighting"
-        st.session_state.selected_agent = selected_agent
+        # 사이드바에서 선택된 에이전트 사용 (기본값: firefighting)
+        selected_agent = st.session_state.get('selected_agent', 'firefighting')
+        selected_kb_id = st.session_state.get('selected_kb_id')
+        
+        # 에이전트나 KB 변경 감지 및 채팅 초기화
+        if (st.session_state.previous_agent != selected_agent or 
+            st.session_state.previous_kb_id != selected_kb_id):
+            st.session_state.messages = []
+            st.session_state.session_id = str(uuid.uuid4())
+            st.session_state.previous_agent = selected_agent
+            st.session_state.previous_kb_id = selected_kb_id
+            st.rerun()
         
         # 채팅 인터페이스
         ui_components['chat_interface'].render_chat_history()
@@ -89,11 +102,22 @@ def main():
             # AI 응답 생성
             with st.chat_message("assistant"):
                 with st.spinner("답변을 생성하고 있습니다..."):
+                    # 선택된 에이전트로 메시지 라우팅 (KB ID 포함)
+                    # st.write(f"🔍 디버그: selected_agent = {selected_agent}")
+                    # st.write(f"🔍 디버그: selected_kb_id = {selected_kb_id}")
                     result = agent_manager.route_message(
                         selected_agent, 
                         prompt, 
-                        st.session_state.session_id
+                        st.session_state.session_id,
+                        kb_id=selected_kb_id
                     )
+                    # st.write(f"🔍 디버그: route_message 결과 = {result.get('success')}")
+                    
+                    # 에이전트 정보 표시
+                    agent_config = next((a for a in agent_manager.get_available_agents() if a.name == selected_agent), None)
+                    if agent_config:
+                        icon = agent_config.ui_config.get('icon', '🤖') if agent_config.ui_config else '🤖'
+                        st.caption(f"{icon} {agent_config.display_name} 사용 중")
                     
                     if result.get("success"):
                         # 응답 표시
@@ -101,8 +125,12 @@ def main():
                         
                         # 참조 정보 표시
                         references = result.get("references", [])
+                        # st.write(f"🔍 디버그: 참조 개수 = {len(references)}")
                         if references:
+                            # st.write(f"🔍 디버그: 첫 번째 참조 키 = {list(references[0].keys())}")
                             ui_components['reference_display'].render_references(references)
+                        # else:
+                            # st.write("🔍 디버그: 참조 없음")
                         
                         # 세션에 저장
                         st.session_state.messages.append({
@@ -116,27 +144,13 @@ def main():
     
     # 지식 그래프 표시
     if st.session_state.get('show_knowledge_graph', False):
-        selected_graph_type = st.session_state.get('selected_graph_type', '모든 문서의 GraphRAG')
+        selected_graph_type = st.session_state.get('selected_graph_type', '🕸️ GraphRAG')
         
         st.markdown("---")
-        st.markdown(f"### 🕸️ {selected_graph_type}")
+        st.markdown(f"### {selected_graph_type}")
         
         # 그래프 타입별 설명 추가
-        if selected_graph_type == "🕸️ 모든 문서의 GraphRAG":
-            st.markdown("""
-            **Neptune Analytics 기반 문서 관계 시각화**
-            
-            이 그래프는 선박 소방 규정 문서들 간의 복잡한 관계를 시각적으로 보여줍니다. 
-            각 노드는 문서나 핵심 개념을 나타내며, 엣지는 이들 간의 연결 관계를 표현합니다.
-            
-            - 📊 **전체 노드**: 7,552개, **전체 관계**: 11,949개
-              - **CONTAINS**: 9,418개 (Chunk → Entity)
-              - **FROM**: 2,531개 (Chunk → DocumentId)
-            - 🔍 **표시 범위**: 최대 2,000개 노드, 3,000개 엣지
-            - 🎨 **색상 구분**: Document(청록), Entity(파랑), 기타(주황)
-            - 🖱️ **상호작용**: 노드 클릭, 드래그, 줌 기능 지원
-            """)
-        elif selected_graph_type == "FSS 문서 GraphDB":
+        if selected_graph_type == "FSS 문서 GraphDB":
             st.markdown("""
             **Neptune SPARQL 기반 FSS 온톨로지 시각화**
             
@@ -165,17 +179,23 @@ def main():
             try:
                 import streamlit.components.v1 as components
                 
-                if selected_graph_type == "🕸️ 모든 문서의 GraphRAG":
-                    from knowledge_graph import create_neptune_graph
+                if selected_graph_type == "📚 GraphRAG(bda+neptune)":
+                    from knowledge_graph_bda import create_neptune_graph_bda
                     
-                    # 지식 그래프 생성
-                    net = create_neptune_graph()
-                    
-                    # HTML 생성 및 표시
+                    # BDA Neptune Analytics 그래프
+                    net = create_neptune_graph_bda()
                     html_string = net.generate_html()
-                    components.html(html_string, height=900)  # 더 큰 높이
+                    components.html(html_string, height=900)
                     
-                elif selected_graph_type == "FSS 문서 GraphDB":
+                elif selected_graph_type == "🔥 GraphRAG(claude+neptune)":
+                    from knowledge_graph_claude import create_neptune_graph_claude
+                    
+                    # Claude Neptune Analytics 그래프
+                    net = create_neptune_graph_claude()
+                    html_string = net.generate_html()
+                    components.html(html_string, height=900)
+                    
+                elif selected_graph_type == "🔥 FSS GraphDB":
                     from fss_full_graph import get_full_ontology, create_full_graph
                     
                     # FSS 온톨로지 데이터 가져오기

@@ -18,70 +18,38 @@ print("=" * 80)
 # 1. 모듈 import 테스트
 print("\n[1단계] 모듈 import 테스트...")
 try:
-    from core.agent_manager import AgentConfig
-    print("✓ AgentConfig import 성공")
-    
-    from agents.graphrag_agent.agent import Agent
-    print("✓ GraphRAG Agent import 성공")
+    from core.agent_manager import AgentManager
+    print("✓ AgentManager import 성공")
 except Exception as e:
     print(f"✗ Import 실패: {e}")
     import traceback
     traceback.print_exc()
     sys.exit(1)
 
-# 2. 환경 변수 확인
-print("\n[2단계] 환경 변수 확인...")
-kb_id = os.getenv("KNOWLEDGE_BASE_ID")
-extract_arn = os.getenv("LAMBDA_EXTRACT_ENTITIES_ARN")
-retrieve_arn = os.getenv("LAMBDA_KB_RETRIEVE_ARN")
-
-print(f"✓ KB ID: {kb_id}")
-print(f"✓ Extract Entities ARN: {extract_arn[:60]}..." if extract_arn else "✗ Extract Entities ARN 없음")
-print(f"✓ KB Retrieve ARN: {retrieve_arn[:60]}..." if retrieve_arn else "✗ KB Retrieve ARN 없음")
-
-# 3. Agent 설정 생성
-print("\n[3단계] Agent 설정 생성...")
+# 2. AgentManager 초기화 및 GraphRAG 에이전트 로드
+print("\n[2단계] AgentManager 초기화...")
 try:
-    config = AgentConfig(
-        name="graphrag",
-        display_name="GraphRAG 검색",
-        description="테스트",
-        module_path="agents.graphrag_agent.agent",
-        bedrock_agent_id="",
-        bedrock_alias_id="",
-        bedrock_model_id=os.getenv("BEDROCK_MODEL_ID", "anthropic.claude-3-5-sonnet-20240620-v1:0"),
-        knowledge_base_id=kb_id,
-        lambda_function_names={
-            "extract_entities": extract_arn,
-            "kb_retrieve": retrieve_arn
-        },
-        reranker_model_arn=os.getenv("RERANKER_MODEL_ARN", "")
-    )
-    print("✓ 설정 생성 성공")
-except Exception as e:
-    print(f"✗ 설정 생성 실패: {e}")
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
-
-# 4. Agent 초기화
-print("\n[4단계] Agent 초기화...")
-try:
-    agent = Agent(config)
-    print("✓ Agent 초기화 성공")
+    manager = AgentManager()
+    agent = manager.get_agent('graphrag')
     
-    status = agent.get_workflow_status()
-    print(f"✓ Query Analysis Agent: {status['workflow_agents']['query_analysis']['initialized']}")
-    print(f"✓ Retrieval Agent: {status['workflow_agents']['retrieval']['initialized']}")
-    print(f"✓ Synthesis Agent: {status['workflow_agents']['synthesis']['initialized']}")
+    if agent:
+        print("✓ GraphRAG Agent 로드 성공")
+        
+        status = agent.get_workflow_status()
+        print(f"✓ Query Analysis Agent: {status['workflow_agents']['query_analysis']['initialized']}")
+        print(f"✓ Retrieval Agent: {status['workflow_agents']['retrieval']['initialized']}")
+        print(f"✓ Synthesis Agent: {status['workflow_agents']['synthesis']['initialized']}")
+    else:
+        print("✗ GraphRAG Agent 로드 실패")
+        sys.exit(1)
 except Exception as e:
-    print(f"✗ Agent 초기화 실패: {e}")
+    print(f"✗ AgentManager 초기화 실패: {e}")
     import traceback
     traceback.print_exc()
     sys.exit(1)
 
-# 5. 간단한 질문 테스트
-print("\n[5단계] 질문 처리 테스트...")
+# 3. 간단한 질문 테스트
+print("\n[3단계] 질문 처리 테스트...")
 question = "선박에 반드시 갖춰야 하는 소화설비 기본 구성을 알려줘"
 print(f"질문: {question}")
 

@@ -2,7 +2,6 @@ import boto3
 import streamlit as st
 from pyvis.network import Network
 
-@st.cache_resource
 def get_neptune_client():
     from botocore.config import Config
     return boto3.client(
@@ -70,30 +69,47 @@ def create_neptune_graph():
             labels = node.get('labels', ['Node'])
             properties = node.get('properties', {})
             
-            # 엔티티 ID에서 실제 이름 추출
-            if 'Entity' in labels and node_id.startswith('x-amz-bedrock-kb-'):
-                # "x-amz-bedrock-kb-" 제거하고 실제 엔티티 이름 사용
-                name = node_id.replace('x-amz-bedrock-kb-', '')
-            else:
-                # 기존 로직: 파일명, 텍스트 등에서 추출
-                bedrock_text = properties.get('AMAZON_BEDROCK_TEXT', '')
-                source_uri = properties.get('metadata_x-amz-bedrock-kb-source-uri', '')
+            # 더 의미있는 속성 우선 활용
+            bedrock_text = properties.get('AMAZON_BEDROCK_TEXT', '')
+            source_uri = properties.get('metadata_x-amz-bedrock-kb-source-uri', '')
+            
+            # 1순위: AMAZON_BEDROCK_TEXT에서 의미있는 키워드 추출
+            if bedrock_text and len(bedrock_text) > 10:
+                # HTML 태그와 특수문자 제거 후 의믴있는 텍스트 추출
+                import re
+                clean_text = re.sub(r'<[^>]+>', '', bedrock_text)  # HTML 태그 제거
+                clean_text = re.sub(r'[#\-\*\|\\]+', ' ', clean_text)  # 특수문자 제거
+                clean_text = clean_text.strip()
                 
-                if source_uri:
-                    filename = source_uri.split('/')[-1].replace('.PDF', '').replace('.pdf', '')
-                    name = filename
-                elif bedrock_text:
-                    text_preview = bedrock_text[:50].strip()
-                    if 'MATERIAL' in text_preview:
-                        name = 'MATERIAL'
-                    elif 'PIPE' in text_preview:
-                        name = 'PIPE'
-                    elif 'STEEL' in text_preview:
-                        name = 'STEEL'
+                if clean_text:
+                    text_words = [word for word in clean_text.split() if len(word) > 1]  # 1글자 단어 제외
+                    if len(text_words) >= 3:
+                        name = f"[Chunk] {' '.join(text_words[:3])}"
+                    elif len(text_words) >= 1:
+                        chunk_name = ' '.join(text_words[:2]) if len(text_words) >= 2 else text_words[0]
+                        name = f"[Chunk] {chunk_name}"
                     else:
-                        name = text_preview.split()[0] if text_preview.split() else 'Chunk'
+                        name = f"[Chunk] {bedrock_text[:20].strip()}"
                 else:
-                    name = str(labels[0]) if labels else node_id[:8]
+                    name = f"[Chunk] {bedrock_text[:20].strip()}"
+            # 2순위: 파일명에서 추출
+            elif source_uri:
+                filename = source_uri.split('/')[-1].replace('.PDF', '').replace('.pdf', '')
+                name = filename
+            # 3순위: Entity 노드의 ID 정리
+            elif 'Entity' in labels and node_id.startswith('x-amz-bedrock-kb-'):
+                clean_id = node_id.replace('x-amz-bedrock-kb-', '')
+                # 긴 ID는 줄여서 표시
+                if len(clean_id) > 20:
+                    name = clean_id[:20] + '...'
+                else:
+                    name = clean_id
+            # 4순위: 라벨 기반
+            else:
+                if 'Chunk' in labels:
+                    name = f"[Chunk] {node_id[:15]}..."
+                else:
+                    name = str(labels[0]) if labels and labels[0] != 'DocumentID' else f"Node-{node_id[:8]}"
             
             color = "#4ecdc4" if 'Document' in str(node.get('labels', [])) else "#45b7d1" if 'Entity' in str(node.get('labels', [])) else "#ff9f43"
             

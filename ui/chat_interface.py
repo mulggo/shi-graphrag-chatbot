@@ -31,9 +31,15 @@ class ChatInterface:
         # 참조 정보가 있으면 간략 표시
         references = message.get("references", [])
         if references:
+            # Plan-Execute Agent와 기존 에이전트 형식 모두 지원
             ref_summary = ", ".join([
-                f"[{i}] {ref['source_file']}" 
+                f"[{i}] {ref.get('source_file', ref.get('source', 'Unknown'))}" 
                 for i, ref in enumerate(references, 1)
             ])
             st.caption(f"📚 참조: {ref_summary}")
+            
+            # 참조 상세 표시
+            from ui.reference_display import ReferenceDisplay
+            display = ReferenceDisplay()
+            display.render_references(references)
         

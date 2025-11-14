@@ -1,9 +1,8 @@
 """
-사이드바 UI 컴포넌트
+사이드바 UI 컴포넌트 - 정리된 버전
 """
 import streamlit as st
 import uuid
-from typing import Dict
 
 class Sidebar:
     """사이드바 관리 클래스"""
@@ -13,124 +12,167 @@ class Sidebar:
     
     def render_sidebar(self):
         """사이드바 전체 렌더링"""
-        self._render_system_info()
+        self._render_data_schema_button()
         st.markdown("---")
-        self._render_graphrag_info()
+        self._render_agent_selector()
         st.markdown("---")
-        self._render_knowledge_graph()
+        self._render_kb_selector()
         st.markdown("---")
-        self._render_agent_info()
+        self._render_graph_selector()
+        st.markdown("---")
+        self._render_current_agent_info()
+        st.markdown("---")
+        self._render_session_controls()
     
-    def _render_session_info(self):
-        """세션 정보 표시"""
-        st.markdown("### 📋 세션 정보")
-        st.markdown(f"**세션 ID:** `{st.session_state.session_id[:8]}...`")
-        st.markdown(f"**메시지 수:** {len(st.session_state.messages)}")
+    def _render_data_schema_button(self):
+        """데이터 구조 안내서 버튼"""
+        st.markdown("📊 **데이터 구조 안내서**")
         
-        if st.button("🔄 새 세션 시작", width='stretch'):
-            st.session_state.messages = []
-            st.session_state.session_id = str(uuid.uuid4())
-            st.session_state.selected_agent = None
+        if st.button("📊 데이터 구조 보기", use_container_width=True):
+            # 다른 모든 보기 상태 초기화
+            st.session_state.show_knowledge_graph = False
+            st.session_state.selected_graph_type = None
+            # 데이터 스키마 보기 상태 설정
+            st.session_state.show_data_schema = True
             st.rerun()
     
-    def _render_agent_info(self):
-        """현재 에이전트 정보 표시"""
-        st.markdown("### 🚢 선박 소방 규정")
+    def _render_agent_selector(self):
+        """에이전트 선택"""
+        st.markdown("### 🤖 에이전트 선택")
         
-        # 지원 주제
-        topics = [
-            "고정식 소화 시스템",
-            "휴대용 소화기", 
-            "배수 시스템",
-            "안전 구역",
-            "SOLAS 규정"
-        ]
-        
-        st.markdown("**지원 주제:**")
-        for topic in topics:
-            st.markdown(f"• {topic}")
-    
-    def _render_system_info(self):
-        """시스템 정보 표시"""
-        st.markdown("### ⚙️ 시스템 정보")
-        
-        # 사용 가능한 에이전트 수
         available_agents = self.agent_manager.get_available_agents()
-        st.markdown(f"**사용 가능한 에이전트:** {len(available_agents)}개")
         
-        # 에이전트 목록
-        if available_agents:
-            st.markdown("**에이전트 목록:**")
-            st.markdown("🟢 Bedrock Agent")
+        if not available_agents:
+            st.error("사용 가능한 에이전트가 없습니다.")
+            return
         
-        # 데이터 구조 안내서 라디오 버튼
-        schema_option = st.radio(
-            "데이터 구조:",
-            options=["선택 안함", "📊 데이터 구조 안내서"],
-            index=0,
-            key="data_schema_radio"
+        # 에이전트 옵션 생성
+        options = []
+        agent_names = []
+        for agent in available_agents:
+            icon = agent.ui_config.get('icon', '🤖') if agent.ui_config else '🤖'
+            options.append(f"{icon} {agent.display_name}")
+            agent_names.append(agent.name)
+        
+        # 현재 선택된 에이전트의 인덱스 찾기
+        current_agent = st.session_state.get('selected_agent', 'plan_execute')
+        try:
+            current_index = agent_names.index(current_agent)
+        except ValueError:
+            current_index = 0  # 기본값
+        
+        # 라디오 버튼
+        selected = st.radio(
+            "에이전트:",
+            options=options,
+            index=current_index,
+            key="agent_radio"
         )
         
-        # 라디오 버튼 선택에 따라 상태 업데이트
-        if schema_option == "📊 데이터 구조 안내서":
-            if not st.session_state.get('show_data_schema', False):
-                st.session_state.show_data_schema = True
-                st.rerun()
-        else:
-            if st.session_state.get('show_data_schema', False):
-                st.session_state.show_data_schema = False
-                st.rerun()
-    
-    def _render_graphrag_info(self):
-        """GraphRAG 정보 섹션"""
-        st.markdown("### 🧠 GraphRAG")
+        # 선택된 에이전트 찾기
+        selected_index = options.index(selected)
+        selected_agent = agent_names[selected_index]
         
-        # KB 선택 라디오 버튼
-        kb_option = st.radio(
-            "Knowledge Base 선택:",
-            options=["선택 안함", "bda-neptune"],  # "bda-neptune-2" 주석 처리
-            index=1,  # 기본값으로 bda-neptune 선택
-            key="kb_selector_radio"
-        )
-    
-    def _render_agent_info(self):
-        """현재 에이전트 정보 표시"""
-        st.markdown("### 🚢 선박 소방 규정")
+        # 세션 상태에 저장 (변경된 경우에만)
+        if st.session_state.get('selected_agent') != selected_agent:
+            st.session_state.selected_agent = selected_agent
+            st.rerun()
         
-        # 지원 주제
-        topics = [
-            "고정식 소화 시스템",
-            "휴대용 소화기", 
-            "배수 시스템",
-            "안전 구역",
-            "SOLAS 규정"
+        # 디버그
+        # st.caption(f"선택: {selected_index} → {selected_agent}")
+    
+    def _render_kb_selector(self):
+        """Knowledge Base 선택"""
+        st.markdown("### 🧠 Knowledge Base")
+        
+        kb_options = [
+            "🔥 GraphRAG(claude+neptune)",
+            "📚 GraphRAG(bda+neptune)"
         ]
         
-        st.markdown("**지원 주제:**")
-        for topic in topics:
-            st.markdown(f"• {topic}")
-    
-    def _render_knowledge_graph(self):
-        """지식 그래프 섹션 렌더링"""
-        st.markdown("### 🕸️ 지식 그래프")
-        st.markdown("Neptune Analytics 기반 문서 관계 시각화")
+        kb_ids = ["PWRU19RDNE", "CDPB5AI6BH"]
         
-        # 라디오 버튼으로 지식 그래프 선택
-        graph_option = st.radio(
-            "그래프 선택:",
-            options=["선택 안함", "🕸️ 모든 문서의 GraphRAG", "FSS 문서 GraphDB"],
-            index=0,
-            key="knowledge_graph_radio"
+        # 현재 선택된 KB의 인덱스 찾기
+        current_kb = st.session_state.get('selected_kb_id', 'PWRU19RDNE')
+        try:
+            current_kb_index = kb_ids.index(current_kb)
+        except ValueError:
+            current_kb_index = 0  # 기본값 (PWRU19RDNE)
+        
+        selected_kb = st.radio(
+            "KB 선택:",
+            options=kb_options,
+            index=current_kb_index,
+            key="kb_radio"
         )
         
-        # 라디오 버튼 선택에 따라 상태 업데이트
-        if graph_option in ["🕸️ 모든 문서의 GraphRAG", "FSS 문서 GraphDB"]:
-            if not st.session_state.get('show_knowledge_graph', False) or st.session_state.get('selected_graph_type') != graph_option:
-                st.session_state.show_knowledge_graph = True
-                st.session_state.selected_graph_type = graph_option
-                st.rerun()
+        kb_index = kb_options.index(selected_kb)
+        new_kb_id = kb_ids[kb_index]
+        
+        # KB 변경된 경우에만 업데이트
+        if st.session_state.get('selected_kb_id') != new_kb_id:
+            st.session_state.selected_kb_id = new_kb_id
+            st.rerun()
+    
+    def _render_graph_selector(self):
+        """지식 그래프 선택"""
+        st.markdown("### 🕸️ 지식 그래프")
+        
+        graph_options = [
+            "선택 안함",
+            "📚 GraphRAG(bda+neptune)",
+            "🔥 GraphRAG(claude+neptune)",
+            "🔥 FSS GraphDB"
+        ]
+        
+        selected_graph = st.radio(
+            "그래프:",
+            options=graph_options,
+            index=0,
+            key="graph_radio"
+        )
+        
+        # 상태 변경 감지 후에만 rerun 호출
+        current_show = st.session_state.get('show_knowledge_graph', False)
+        current_type = st.session_state.get('selected_graph_type', '')
+        
+        if selected_graph != "선택 안함":
+            new_show = True
+            new_type = selected_graph
         else:
-            if st.session_state.get('show_knowledge_graph', False):
-                st.session_state.show_knowledge_graph = False
-                st.session_state.selected_graph_type = None
-                st.rerun()
+            new_show = False
+            new_type = ''
+        
+        # 상태가 실제로 변경된 경우에만 rerun
+        if current_show != new_show or current_type != new_type:
+            st.session_state.show_knowledge_graph = new_show
+            st.session_state.selected_graph_type = new_type
+            st.rerun()
+    
+    def _render_current_agent_info(self):
+        """현재 선택된 에이전트 정보"""
+        # 에이전트 정보 숨김 처리
+        pass
+        # selected_agent = st.session_state.get('selected_agent')
+        # if selected_agent:
+        #     agent_config = next(
+        #         (a for a in self.agent_manager.get_available_agents() 
+        #          if a.name == selected_agent), None
+        #     )
+        #     if agent_config:
+        #         icon = agent_config.ui_config.get('icon', '🤖') if agent_config.ui_config else '🤖'
+        #         st.markdown(f"### {icon} 현재 에이전트")
+        #         st.markdown(f"**{agent_config.display_name}**")
+        #         st.caption(agent_config.description)
+    
+    def _render_session_controls(self):
+        """세션 제어"""
+        st.markdown("### 📋 세션")
+        
+        if st.button("🔄 새 세션", use_container_width=True):
+            st.session_state.messages = []
+            st.session_state.session_id = str(uuid.uuid4())
+            # 지식 그래프 초기화
+            st.session_state.show_knowledge_graph = False
+            st.session_state.selected_graph_type = None
+            st.rerun()

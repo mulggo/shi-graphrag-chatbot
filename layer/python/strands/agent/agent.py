@@ -33,6 +33,7 @@ from pydantic import BaseModel
 from .. import _identifier
 from .._async import run_async
 from ..event_loop.event_loop import event_loop_cycle
+from ..tools._tool_helpers import generate_missing_tool_result_content
 
 if TYPE_CHECKING:
     from ..experimental.tools import ToolProvider
@@ -45,6 +46,7 @@ from ..hooks import (
     HookRegistry,
     MessageAddedEvent,
 )
+from ..interrupt import _InterruptState
 from ..models.bedrock import BedrockModel
 from ..models.model import Model
 from ..session.session_manager import SessionManager
@@ -57,9 +59,8 @@ from ..tools.structured_output._structured_output_context import StructuredOutpu
 from ..tools.watcher import ToolWatcher
 from ..types._events import AgentResultEvent, InitEventLoopEvent, ModelStreamChunkEvent, ToolInterruptEvent, TypedEvent
 from ..types.agent import AgentInput
-from ..types.content import ContentBlock, Message, Messages
+from ..types.content import ContentBlock, Message, Messages, SystemContentBlock
 from ..types.exceptions import ContextWindowOverflowException
-from ..types.interrupt import InterruptResponseContent
 from ..types.tools import ToolResult, ToolUse
 from ..types.traces import AttributeValue
 from .agent_result import AgentResult
@@ -67,7 +68,6 @@ from .conversation_manager import (
     ConversationManager,
     SlidingWindowConversationManager,
 )
-from .interrupt import InterruptState
 from .state import AgentState
 
 logger = logging.getLogger(__name__)
@@ -170,22 +170,21 @@ class Agent:
                             self._agent._interrupt_state.deactivate()
                             raise RuntimeError("cannot raise interrupt in direct tool call")
 
-                    return tool_results[0]
+                    tool_result = tool_results[0]
+
+                    if record_direct_tool_call is not None:
+                        should_record_direct_tool_call = record_direct_tool_call
+                    else:
+                        should_record_direct_tool_call = self._agent.record_direct_tool_call
+
+                    if should_record_direct_tool_call:
+                        # Create a record of this tool execution in the message history
+                        await self._agent._record_tool_execution(tool_use, tool_result, user_message_override)
+
+                    return tool_result
 
                 tool_result = run_async(acall)
-
-                if record_direct_tool_call is not None:
-                    should_record_direct_tool_call = record_direct_tool_call
-                else:
-                    should_record_direct_tool_call = self._agent.record_direct_tool_call
-
-                if should_record_direct_tool_call:
-                    # Create a record of this tool execution in the message history
-                    self._agent._record_tool_execution(tool_use, tool_result, user_message_override)
-
-                # Apply window management
                 self._agent.conversation_manager.apply_management(self._agent)
-
                 return tool_result
 
             return caller
@@ -216,7 +215,7 @@ class Agent:
         model: Union[Model, str, None] = None,
         messages: Optional[Messages] = None,
         tools: Optional[list[Union[str, dict[str, str], "ToolProvider", Any]]] = None,
-        system_prompt: Optional[str] = None,
+        system_prompt: Optional[str | list[SystemContentBlock]] = None,
         structured_output_model: Optional[Type[BaseModel]] = None,
         callback_handler: Optional[
             Union[Callable[..., Any], _DefaultCallbackHandlerSentinel]
@@ -253,6 +252,7 @@ class Agent:
 
                 If provided, only these tools will be available. If None, all tools will be available.
             system_prompt: System prompt to guide model behavior.
+                Can be a string or a list of SystemContentBlock objects for advanced features like caching.
                 If None, the model will behave according to its default settings.
             structured_output_model: Pydantic model type(s) for structured output.
                 When specified, all agent calls will attempt to return structured output of this type.
@@ -280,14 +280,15 @@ class Agent:
                 Defaults to None.
             session_manager: Manager for handling agent sessions including conversation history and state.
                 If provided, enables session-based persistence and state management.
-            tool_executor: Definition of tool execution stragety (e.g., sequential, concurrent, etc.).
+            tool_executor: Definition of tool execution strategy (e.g., sequential, concurrent, etc.).
 
         Raises:
             ValueError: If agent id contains path separators.
         """
         self.model = BedrockModel() if not model else BedrockModel(model_id=model) if isinstance(model, str) else model
         self.messages = messages if messages is not None else []
-        self.system_prompt = system_prompt
+        # initializing self._system_prompt for backwards compatibility
+        self._system_prompt, self._system_prompt_content = self._initialize_system_prompt(system_prompt)
         self._default_structured_output_model = structured_output_model
         self.agent_id = _identifier.validate(agent_id or _DEFAULT_AGENT_ID, _identifier.Identifier.AGENT)
         self.name = name or _DEFAULT_AGENT_NAME
@@ -350,7 +351,7 @@ class Agent:
 
         self.hooks = HookRegistry()
 
-        self._interrupt_state = InterruptState()
+        self._interrupt_state = _InterruptState()
 
         # Initialize session management functionality
         self._session_manager = session_manager
@@ -363,6 +364,35 @@ class Agent:
             for hook in hooks:
                 self.hooks.add_hook(hook)
         self.hooks.invoke_callbacks(AgentInitializedEvent(agent=self))
+
+    @property
+    def system_prompt(self) -> str | None:
+        """Get the system prompt as a string for backwards compatibility.
+
+        Returns the system prompt as a concatenated string when it contains text content,
+        or None if no text content is present. This maintains backwards compatibility
+        with existing code that expects system_prompt to be a string.
+
+        Returns:
+            The system prompt as a string, or None if no text content exists.
+        """
+        return self._system_prompt
+
+    @system_prompt.setter
+    def system_prompt(self, value: str | list[SystemContentBlock] | None) -> None:
+        """Set the system prompt and update internal content representation.
+
+        Accepts either a string or list of SystemContentBlock objects.
+        When set, both the backwards-compatible string representation and the internal
+        content block representation are updated to maintain consistency.
+
+        Args:
+            value: System prompt as string, list of SystemContentBlock objects, or None.
+                  - str: Simple text prompt (most common use case)
+                  - list[SystemContentBlock]: Content blocks with features like caching
+                  - None: Clear the system prompt
+        """
+        self._system_prompt, self._system_prompt_content = self._initialize_system_prompt(value)
 
     @property
     def tool(self) -> ToolCaller:
@@ -531,7 +561,7 @@ class Agent:
             category=DeprecationWarning,
             stacklevel=2,
         )
-        self.hooks.invoke_callbacks(BeforeInvocationEvent(agent=self))
+        await self.hooks.invoke_callbacks_async(BeforeInvocationEvent(agent=self))
         with self.tracer.tracer.start_as_current_span(
             "execute_structured_output", kind=trace_api.SpanKind.CLIENT
         ) as structured_output_span:
@@ -539,7 +569,7 @@ class Agent:
                 if not self.messages and not prompt:
                     raise ValueError("No conversation history or prompt provided")
 
-                temp_messages: Messages = self.messages + self._convert_prompt_to_messages(prompt)
+                temp_messages: Messages = self.messages + await self._convert_prompt_to_messages(prompt)
 
                 structured_output_span.set_attributes(
                     {
@@ -572,7 +602,7 @@ class Agent:
                 return event["output"]
 
             finally:
-                self.hooks.invoke_callbacks(AfterInvocationEvent(agent=self))
+                await self.hooks.invoke_callbacks_async(AfterInvocationEvent(agent=self))
 
     def cleanup(self) -> None:
         """Clean up resources used by the agent.
@@ -638,7 +668,7 @@ class Agent:
                     yield event["data"]
             ```
         """
-        self._resume_interrupt(prompt)
+        self._interrupt_state.resume(prompt)
 
         merged_state = {}
         if kwargs:
@@ -655,7 +685,7 @@ class Agent:
             callback_handler = kwargs.get("callback_handler", self.callback_handler)
 
         # Process input and get message to add (if any)
-        messages = self._convert_prompt_to_messages(prompt)
+        messages = await self._convert_prompt_to_messages(prompt)
 
         self.trace_span = self._start_agent_trace_span(messages)
 
@@ -681,38 +711,6 @@ class Agent:
                 self._end_agent_trace_span(error=e)
                 raise
 
-    def _resume_interrupt(self, prompt: AgentInput) -> None:
-        """Configure the interrupt state if resuming from an interrupt event.
-
-        Args:
-            prompt: User responses if resuming from interrupt.
-
-        Raises:
-            TypeError: If in interrupt state but user did not provide responses.
-        """
-        if not self._interrupt_state.activated:
-            return
-
-        if not isinstance(prompt, list):
-            raise TypeError(f"prompt_type={type(prompt)} | must resume from interrupt with list of interruptResponse's")
-
-        invalid_types = [
-            content_type for content in prompt for content_type in content if content_type != "interruptResponse"
-        ]
-        if invalid_types:
-            raise TypeError(
-                f"content_types=<{invalid_types}> | must resume from interrupt with list of interruptResponse's"
-            )
-
-        for content in cast(list[InterruptResponseContent], prompt):
-            interrupt_id = content["interruptResponse"]["interruptId"]
-            interrupt_response = content["interruptResponse"]["response"]
-
-            if interrupt_id not in self._interrupt_state.interrupts:
-                raise KeyError(f"interrupt_id=<{interrupt_id}> | no interrupt found")
-
-            self._interrupt_state.interrupts[interrupt_id].response = interrupt_response
-
     async def _run_loop(
         self,
         messages: Messages,
@@ -729,13 +727,13 @@ class Agent:
         Yields:
             Events from the event loop cycle.
         """
-        self.hooks.invoke_callbacks(BeforeInvocationEvent(agent=self))
+        await self.hooks.invoke_callbacks_async(BeforeInvocationEvent(agent=self))
 
         try:
             yield InitEventLoopEvent()
 
             for message in messages:
-                self._append_message(message)
+                await self._append_message(message)
 
             structured_output_context = StructuredOutputContext(
                 structured_output_model or self._default_structured_output_model
@@ -752,16 +750,16 @@ class Agent:
                     and event.chunk.get("redactContent")
                     and event.chunk["redactContent"].get("redactUserContentMessage")
                 ):
-                    self.messages[-1]["content"] = [
-                        {"text": str(event.chunk["redactContent"]["redactUserContentMessage"])}
-                    ]
+                    self.messages[-1]["content"] = self._redact_user_content(
+                        self.messages[-1]["content"], str(event.chunk["redactContent"]["redactUserContentMessage"])
+                    )
                     if self._session_manager:
                         self._session_manager.redact_latest_message(self.messages[-1], self)
                 yield event
 
         finally:
             self.conversation_manager.apply_management(self)
-            self.hooks.invoke_callbacks(AfterInvocationEvent(agent=self))
+            await self.hooks.invoke_callbacks_async(AfterInvocationEvent(agent=self))
 
     async def _execute_event_loop_cycle(
         self, invocation_state: dict[str, Any], structured_output_context: StructuredOutputContext | None = None
@@ -810,12 +808,27 @@ class Agent:
             if structured_output_context:
                 structured_output_context.cleanup(self.tool_registry)
 
-    def _convert_prompt_to_messages(self, prompt: AgentInput) -> Messages:
+    async def _convert_prompt_to_messages(self, prompt: AgentInput) -> Messages:
         if self._interrupt_state.activated:
             return []
 
         messages: Messages | None = None
         if prompt is not None:
+            # Check if the latest message is toolUse
+            if len(self.messages) > 0 and any("toolUse" in content for content in self.messages[-1]["content"]):
+                # Add toolResult message after to have a valid conversation
+                logger.info(
+                    "Agents latest message is toolUse, appending a toolResult message to have valid conversation."
+                )
+                tool_use_ids = [
+                    content["toolUse"]["toolUseId"] for content in self.messages[-1]["content"] if "toolUse" in content
+                ]
+                await self._append_message(
+                    {
+                        "role": "user",
+                        "content": generate_missing_tool_result_content(tool_use_ids),
+                    }
+                )
             if isinstance(prompt, str):
                 # String input - convert to user message
                 messages = [{"role": "user", "content": [{"text": prompt}]}]
@@ -841,7 +854,7 @@ class Agent:
             raise ValueError("Input prompt must be of type: `str | list[Contentblock] | Messages | None`.")
         return messages
 
-    def _record_tool_execution(
+    async def _record_tool_execution(
         self,
         tool: ToolUse,
         tool_result: ToolResult,
@@ -901,10 +914,10 @@ class Agent:
         }
 
         # Add to message history
-        self._append_message(user_msg)
-        self._append_message(tool_use_msg)
-        self._append_message(tool_result_msg)
-        self._append_message(assistant_msg)
+        await self._append_message(user_msg)
+        await self._append_message(tool_use_msg)
+        await self._append_message(tool_result_msg)
+        await self._append_message(assistant_msg)
 
     def _start_agent_trace_span(self, messages: Messages) -> trace_api.Span:
         """Starts a trace span for the agent.
@@ -920,6 +933,7 @@ class Agent:
             tools=self.tool_names,
             system_prompt=self.system_prompt,
             custom_trace_attributes=self.trace_attributes,
+            tools_config=self.tool_registry.get_all_tools_config(),
         )
 
     def _end_agent_trace_span(
@@ -965,7 +979,57 @@ class Agent:
         properties = tool_spec["inputSchema"]["json"]["properties"]
         return {k: v for k, v in input_params.items() if k in properties}
 
-    def _append_message(self, message: Message) -> None:
+    def _initialize_system_prompt(
+        self, system_prompt: str | list[SystemContentBlock] | None
+    ) -> tuple[str | None, list[SystemContentBlock] | None]:
+        """Initialize system prompt fields from constructor input.
+
+        Maintains backwards compatibility by keeping system_prompt as str when string input
+        provided, avoiding breaking existing consumers.
+
+        Maps system_prompt input to both string and content block representations:
+        - If string: system_prompt=string, _system_prompt_content=[{text: string}]
+        - If list with text elements: system_prompt=concatenated_text, _system_prompt_content=list
+        - If list without text elements: system_prompt=None, _system_prompt_content=list
+        - If None: system_prompt=None, _system_prompt_content=None
+        """
+        if isinstance(system_prompt, str):
+            return system_prompt, [{"text": system_prompt}]
+        elif isinstance(system_prompt, list):
+            # Concatenate all text elements for backwards compatibility, None if no text found
+            text_parts = [block["text"] for block in system_prompt if "text" in block]
+            system_prompt_str = "\n".join(text_parts) if text_parts else None
+            return system_prompt_str, system_prompt
+        else:
+            return None, None
+
+    async def _append_message(self, message: Message) -> None:
         """Appends a message to the agent's list of messages and invokes the callbacks for the MessageCreatedEvent."""
         self.messages.append(message)
-        self.hooks.invoke_callbacks(MessageAddedEvent(agent=self, message=message))
+        await self.hooks.invoke_callbacks_async(MessageAddedEvent(agent=self, message=message))
+
+    def _redact_user_content(self, content: list[ContentBlock], redact_message: str) -> list[ContentBlock]:
+        """Redact user content preserving toolResult blocks.
+
+        Args:
+            content: content blocks to be redacted
+            redact_message: redact message to be replaced
+
+        Returns:
+            Redacted content, as follows:
+            - if the message contains at least a toolResult block,
+                all toolResult blocks(s) are kept, redacting only the result content;
+            - otherwise, the entire content of the message is replaced
+                with a single text block with the redact message.
+        """
+        redacted_content = []
+        for block in content:
+            if "toolResult" in block:
+                block["toolResult"]["content"] = [{"text": redact_message}]
+                redacted_content.append(block)
+
+        if not redacted_content:
+            # Text content is added only if no toolResult blocks were found
+            redacted_content = [{"text": redact_message}]
+
+        return redacted_content
