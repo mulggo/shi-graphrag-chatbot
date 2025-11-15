@@ -33,14 +33,17 @@ class ReferenceDisplay:
     
     def _render_single_reference(self, ref: Dict, index: int):
         """단일 참조 정보 렌더링"""
+        import time
         # OCR 텍스트 표시
         st.subheader("📄 OCR 추출 텍스트")
         if ref.get('ocr_text'):
+            # 타임스탬프와 메시지 인덱스를 포함한 고유 키 생성
+            unique_key = f"ref_text_{st.session_state.session_id}_{len(st.session_state.messages)}_{index}_{int(time.time() * 1000)}"
             st.text_area(
                 "원문 내용", 
                 ref['ocr_text'], 
                 height=300, 
-                key=f"ref_text_{index}",
+                key=unique_key,
                 help="PDF에서 OCR로 추출된 원문 텍스트입니다."
             )
         else:
@@ -127,11 +130,13 @@ class ReferenceDisplay:
                 expanded=False
             ):
                 st.markdown("**📝 문서 내용**")
+                import time
+                unique_key = f"simple_ref_{st.session_state.session_id}_{len(st.session_state.messages)}_{i}_{int(time.time() * 1000)}"
                 st.text_area(
                     "추출된 내용", 
                     ref.get('content', ''), 
                     height=200, 
-                    key=f"simple_ref_{i}",
+                    key=unique_key,
                     help="Knowledge Base에서 검색된 문서 내용입니다."
                 )
                 

@@ -53,7 +53,8 @@ def create_neptune_graph():
 ```
 
 #### Neptune Analytics Configuration
-- **Graph ID**: `g-gqisj8edd6`
+- **BDA Graph ID**: `g-goxs5d7fi3`
+- **Claude Graph ID**: `g-ryb6suoa69`
 - **Region**: `us-west-2`
 - **Query Language**: OpenCypher
 - **Endpoint**: Neptune Analytics API
@@ -278,7 +279,7 @@ Graphs are only loaded when selected, not on initial page load.
 ```python
 # Check graph ID and region
 neptune_client.execute_query(
-    graphIdentifier='g-gqisj8edd6',
+    graphIdentifier='g-goxs5d7fi3',  # BDA graph
     queryString=query,
     language='OPEN_CYPHER'
 )

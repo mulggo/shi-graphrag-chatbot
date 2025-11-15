@@ -33,31 +33,30 @@ graph TB
     %% Agent Management Layer
     A --> G[Agent Manager]
     G --> H[Plan-Execute Agent]
-    G --> I[Future Agents...]
     
-    %% Knowledge Systems
-    H --> J[AWS Bedrock Agent]
-    J --> K[Knowledge Base PWRU19RDNE]
-    J --> L[Knowledge Base CDPB5AI6BH]
+    %% Direct AWS Integration
+    H --> J[Bedrock Agent Runtime]
+    H --> K[Bedrock Runtime]
+    H --> L[DynamoDB OCR]
+    
+    %% Knowledge Bases
+    J --> M[KB PWRU19RDNE]
+    J --> N[KB CDPB5AI6BH]
     
     %% Graph Databases
-    E --> M[Neptune Analytics BDA]
-    E --> N[Neptune Analytics Claude]
-    E --> O[Neptune SPARQL FSS]
+    E --> O[Neptune BDA g-goxs5d7fi3]
+    E --> P[Neptune Claude g-ryb6suoa69]
+    E --> Q[Neptune SPARQL FSS]
     
-    %% Storage & Processing
-    K --> P[S3 Multimodal Storage]
-    L --> Q[S3 Document Store]
-    J --> R[Lambda Tools]
-    
-    %% External Services
-    H --> S[Claude Haiku Model]
-    H --> T[Cohere Reranking]
+    %% Models
+    K --> R[Claude Haiku]
+    K --> S[Claude Sonnet]
+    K --> T[Cohere Rerank]
     
     style A fill:#e1f5fe
     style G fill:#f3e5f5
-    style J fill:#fff3e0
-    style M fill:#e8f5e8
+    style H fill:#fff3e0
+    style O fill:#e8f5e8
 ```
 
 ## 🔧 핵심 컴포넌트
@@ -99,13 +98,13 @@ config/
 - **CDPB5AI6BH**: BDA + Neptune (텍스트)
 
 #### **Knowledge Bases**
-- **S3 Storage**: `s3://claude-neptune` (멀티모달)
-- **Document Store**: OCR 텍스트 + 원본 이미지
-- **Lambda Tools**: 검색 및 처리 함수
+- **PWRU19RDNE**: Claude + Neptune (멀티모달)
+- **CDPB5AI6BH**: BDA + Neptune (텍스트)
+- **DynamoDB**: OCR 텍스트 저장 (`ship-firefighting-ocr`)
 
 #### **Graph Databases**
-- **Neptune Analytics BDA**: 7,552 노드, 11,949 엣지
-- **Neptune Analytics Claude**: 문서-엔티티 관계
+- **Neptune BDA**: `g-goxs5d7fi3` (7,552 노드, 11,949 엣지)
+- **Neptune Claude**: `g-ryb6suoa69` (문서-엔티티 관계)
 - **Neptune SPARQL**: FSS 온톨로지 (653 트리플)
 
 ## 🔄 데이터 플로우
@@ -117,10 +116,10 @@ config/
 
 ### 2. **Plan-Execute 워크플로우**
 ```
-1. 문서 계획 수립 (Claude Haiku)
-2. Neptune KB 검색
-3. Cohere Reranking
-4. 최종 응답 생성 (한국어)
+1. 문서 계획 수립 (Claude Haiku via Bedrock Runtime)
+2. Knowledge Base 검색 (Bedrock Agent Runtime)
+3. Cohere Reranking (Bedrock Runtime)
+4. 최종 응답 생성 (Claude Sonnet)
 ```
 
 ### 3. **멀티모달 처리**
@@ -143,18 +142,19 @@ Neptune SPARQL → SPARQL 쿼리 → FSS 온톨로지 → 시맨틱 그래프
 
 ### **Backend**
 - **Python 3.11+**: 메인 언어
-- **AWS Bedrock**: AI 모델 서비스
+- **AWS Bedrock**: AI 모델 서비스 (직접 호출)
 - **AWS Neptune**: 그래프 데이터베이스
-- **AWS Lambda**: 서버리스 함수
+- **AWS DynamoDB**: OCR 데이터 저장
 
 ### **AI/ML**
-- **Claude 3 Haiku**: 계획 수립 및 응답 생성
-- **Cohere**: 문서 재순위화
-- **AWS Bedrock Agent**: 통합 AI 에이전트
+- **Claude 3 Haiku**: 계획 수립
+- **Claude 3 Sonnet**: 최종 응답 생성
+- **Cohere Rerank v3.5**: 문서 재순위화
+- **Bedrock Agent Runtime**: Knowledge Base 검색
 
 ### **Storage**
 - **Amazon S3**: 문서 및 이미지 저장
-- **DynamoDB**: OCR 메타데이터 (선택적)
+- **DynamoDB**: OCR 텍스트 저장 (`ship-firefighting-ocr`)
 
 ## 🚀 배포 구조
 
@@ -181,9 +181,10 @@ Internet → CloudFront → ALB → EC2 Instance → Streamlit App
 # 필수 환경변수
 AWS_REGION=us-west-2
 BEDROCK_AGENT_ID=WT3ZJ25XCL
-BEDROCK_ALIAS_ID=3RWZZLJDY1
-KNOWLEDGE_BASE_ID=ZGBA1R5CS0
-NEPTUNE_GRAPH_ID=g-gqisj8edd6
+BEDROCK_AGENT_ALIAS_ID=3RWZZLJDY1
+KNOWLEDGE_BASE_ID=CDPB5AI6BH
+NEPTUNE_BDA_GRAPH_ID=g-goxs5d7fi3
+NEPTUNE_CLAUDE_GRAPH_ID=g-ryb6suoa69
 ```
 
 ## 📊 시스템 메트릭

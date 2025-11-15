@@ -4,8 +4,8 @@ Description: 'Simple CloudFront distribution for Streamlit application'
 Parameters:
   StreamlitOriginIP:
     Type: String
-    Default: 'ec2-35-162-142-5.us-west-2.compute.amazonaws.com'
-    Description: 'EC2 instance public DNS name for Streamlit app'
+    Default: 'streamlit-alb-1809216659.us-west-2.elb.amazonaws.com'
+    Description: 'ALB DNS name for Streamlit app'
 
 Resources:
   # CloudFront Distribution
@@ -23,7 +23,7 @@ Resources:
           - Id: streamlit-origin
             DomainName: !Ref StreamlitOriginIP
             CustomOriginConfig:
-              HTTPPort: 8501
+              HTTPPort: 80
               OriginProtocolPolicy: http-only
         
         # Default Cache Behavior
@@ -46,13 +46,8 @@ Resources:
           # No caching for Streamlit dynamic content
           CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # CachingDisabled
           
-          # Forward all headers and query strings for Streamlit
-          ForwardedValues:
-            QueryString: true
-            Headers:
-              - '*'
-            Cookies:
-              Forward: all
+          # Forward all headers for WebSocket support
+          OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3  # AllViewer
 
 Outputs:
   CloudFrontURL:

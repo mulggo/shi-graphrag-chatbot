@@ -102,10 +102,10 @@ shi-graphrag-chatbot/
 # .env
 AWS_REGION=us-west-2
 BEDROCK_AGENT_ID=WT3ZJ25XCL
-BEDROCK_ALIAS_ID=3RWZZLJDY1
-KNOWLEDGE_BASE_ID=ZGBA1R5CS0
-NEPTUNE_GRAPH_ID=g-goxs5d7fi3
-NEPTUNE_ENDPOINT=your-neptune-endpoint
+BEDROCK_AGENT_ALIAS_ID=3RWZZLJDY1
+KNOWLEDGE_BASE_ID=CDPB5AI6BH
+NEPTUNE_BDA_GRAPH_ID=g-goxs5d7fi3
+NEPTUNE_CLAUDE_GRAPH_ID=g-ryb6suoa69
 ```
 
 ### 에이전트 설정
@@ -169,10 +169,10 @@ aws cloudformation deploy \
 
 ## 🛠️ 테스트 및 디버깅
 
-사용 가능한 테스트 유틸리티:
-- `test_simple.py` - 기본 기능 테스트
-- `test_full_workflow.py` - 엔드투엔드 테스트
-- `debug_aws_resources.py` - AWS 리소스 상태 확인
+내장 디버깅 도구 사용:
+- 데이터 구조 가이드로 시스템 개요 확인
+- 지식 그래프 시각화로 데이터 탐색
+- 참조 문서 표시로 문서 검증
 
 ## 🔒 보안
 

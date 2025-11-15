@@ -30,17 +30,13 @@ AWS_REGION=us-west-2
 ```bash
 # Plan-Execute Agent (기본)
 BEDROCK_AGENT_ID=WT3ZJ25XCL
-BEDROCK_ALIAS_ID=3RWZZLJDY1
-
-# 멀티모달 Agent (PWRU19RDNE)
-MULTIMODAL_AGENT_ID=PWRU19RDNE
-MULTIMODAL_ALIAS_ID=TSTALIASID
+BEDROCK_AGENT_ALIAS_ID=3RWZZLJDY1
 ```
 
 #### **Knowledge Base 설정**
 ```bash
 # BDA Knowledge Base (기본)
-KNOWLEDGE_BASE_ID=ZGBA1R5CS0
+KNOWLEDGE_BASE_ID=CDPB5AI6BH
 
 # Claude Knowledge Base (멀티모달)
 CLAUDE_KB_ID=PWRU19RDNE
@@ -49,11 +45,10 @@ CLAUDE_KB_ID=PWRU19RDNE
 #### **Neptune 설정**
 ```bash
 # Neptune Analytics 그래프 ID들
-NEPTUNE_GRAPH_ID=g-gqisj8edd6          # 기존 그래프 (제거됨)
 NEPTUNE_BDA_GRAPH_ID=g-goxs5d7fi3      # BDA 그래프
 NEPTUNE_CLAUDE_GRAPH_ID=g-ryb6suoa69   # Claude 그래프
 
-# Neptune SPARQL 엔드포인트
+# Neptune SPARQL 엔드포인트 (FSS 온톨로지용)
 NEPTUNE_ENDPOINT=your-neptune-cluster.cluster-xxx.us-west-2.neptune.amazonaws.com
 ```
 
@@ -73,7 +68,7 @@ S3_DOCUMENT_BUCKET=your-document-bucket
 | `AWS_REGION` | AWS 리전 | ✅ | us-west-2 |
 | `BEDROCK_AGENT_ID` | 기본 Bedrock Agent ID | ✅ | WT3ZJ25XCL |
 | `BEDROCK_ALIAS_ID` | 기본 Agent Alias ID | ✅ | 3RWZZLJDY1 |
-| `KNOWLEDGE_BASE_ID` | 기본 Knowledge Base ID | ✅ | ZGBA1R5CS0 |
+| `KNOWLEDGE_BASE_ID` | 기본 Knowledge Base ID | ✅ | CDPB5AI6BH |
 | `NEPTUNE_BDA_GRAPH_ID` | BDA Neptune 그래프 ID | ✅ | g-goxs5d7fi3 |
 | `NEPTUNE_CLAUDE_GRAPH_ID` | Claude Neptune 그래프 ID | ✅ | g-ryb6suoa69 |
 | `NEPTUNE_ENDPOINT` | Neptune SPARQL 엔드포인트 | ⚠️ | - |
@@ -93,25 +88,25 @@ agents:
     description: "AWS IDP 패턴 기반 단순화된 GraphRAG 에이전트"
     bedrock_agent_id: "WT3ZJ25XCL"
     bedrock_alias_id: "3RWZZLJDY1"
-    knowledge_base_id: "ZGBA1R5CS0"
+    knowledge_base_id: "CDPB5AI6BH"
     region: "us-west-2"
     enabled: true
     ui_config:
       icon: "⚡"
       color: "#FF6B35"
     
-  # 멀티모달 Agent (미래 확장용)
-  multimodal:
-    display_name: "🖼️ Multimodal Agent"
-    description: "이미지와 텍스트를 함께 처리하는 멀티모달 에이전트"
-    bedrock_agent_id: "PWRU19RDNE"
-    bedrock_alias_id: "TSTALIASID"
-    knowledge_base_id: "PWRU19RDNE"
-    region: "us-west-2"
-    enabled: false  # 개발 중
-    ui_config:
-      icon: "🖼️"
-      color: "#4ECDC4"
+  # 미래 확장용 예시
+  # future_agent:
+  #   display_name: "🔮 Future Agent"
+  #   description: "미래 기능을 위한 에이전트"
+  #   bedrock_agent_id: "YOUR_AGENT_ID"
+  #   bedrock_alias_id: "YOUR_ALIAS_ID"
+  #   knowledge_base_id: "YOUR_KB_ID"
+  #   region: "us-west-2"
+  #   enabled: false
+  #   ui_config:
+  #     icon: "🔮"
+  #     color: "#9B59B6"
 ```
 
 ### 에이전트 설정 항목 설명
@@ -180,8 +175,11 @@ aws bedrock-agent get-agent --agent-id WT3ZJ25XCL --region us-west-2
 
 #### **2. Knowledge Base 연결**
 ```bash
-# KB 상태 확인
-aws bedrock-agent get-knowledge-base --knowledge-base-id ZGBA1R5CS0 --region us-west-2
+# BDA KB 상태 확인
+aws bedrock-agent get-knowledge-base --knowledge-base-id CDPB5AI6BH --region us-west-2
+
+# Claude KB 상태 확인
+aws bedrock-agent get-knowledge-base --knowledge-base-id PWRU19RDNE --region us-west-2
 ```
 
 #### **3. 필요한 IAM 권한**

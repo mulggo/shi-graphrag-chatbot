@@ -204,6 +204,15 @@ Thumbs.db
 # extract_references.py
 # get_kb_text.py
 
+# Verification scripts (temporary)
+verify_*.py
+check_*.py
+debug_*.py
+
+# Server management scripts
+run_server.sh
+stop_server.sh
+
 # Kiro IDE
 .kiro/
 
@@ -275,6 +284,10 @@ lambda_layer/python/
 
 # CloudFormation outputs
 deployment/outputs/
+
+# Individual CloudFormation templates (exclude, keep integrated only)
+deployment/alb-streamlit.yaml
+deployment/cloudfront-streamlit.yaml
 
 # Terraform (if used)
 *.tfstate

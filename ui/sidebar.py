@@ -84,8 +84,8 @@ class Sidebar:
         st.markdown("### 🧠 Knowledge Base")
         
         kb_options = [
-            "🔥 GraphRAG(claude+neptune)",
-            "📚 GraphRAG(bda+neptune)"
+            "🔥 GraphRAG\n(claude+neptune)",
+            "📚 GraphRAG\n(bda+neptune)"
         ]
         
         kb_ids = ["PWRU19RDNE", "CDPB5AI6BH"]
@@ -118,8 +118,8 @@ class Sidebar:
         
         graph_options = [
             "선택 안함",
-            "📚 GraphRAG(bda+neptune)",
-            "⚡ GraphRAG(claude+neptune)",
+            "📚 GraphRAG\n(bda+neptune)",
+            "⚡ GraphRAG\n(claude+neptune)",
             "🔥 FSS GraphDB"
         ]
         

@@ -103,7 +103,7 @@ def main():
             try:
                 import streamlit.components.v1 as components
                 
-                if selected_graph_type == "📚 GraphRAG(bda+neptune)":
+                if selected_graph_type == "📚 GraphRAG\n(bda+neptune)":
                     from knowledge_graph_bda import create_neptune_graph_bda
                     
                     # BDA Neptune Analytics 그래프
@@ -111,7 +111,7 @@ def main():
                     html_string = net.generate_html()
                     components.html(html_string, height=900)
                     
-                elif selected_graph_type == "🔥 GraphRAG(claude+neptune)":
+                elif selected_graph_type == "⚡ GraphRAG\n(claude+neptune)":
                     from knowledge_graph_claude import create_neptune_graph_claude
                     
                     # Claude Neptune Analytics 그래프

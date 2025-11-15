@@ -105,11 +105,15 @@ cd deployment
 1. **Amazon Bedrock**
    - Agent: `WT3ZJ25XCL`
    - Alias: `3RWZZLJDY1`
-   - Knowledge Base: `ZGBA1R5CS0`
+   - Knowledge Base: `CDPB5AI6BH` (BDA), `PWRU19RDNE` (Claude)
 
 2. **Amazon Neptune**
-   - Analytics: `g-gqisj8edd6`
-   - SPARQL: `shi-neptune-2.cluster-ct0is2emg3pe.us-west-2.neptune.amazonaws.com`
+   - Analytics BDA: `g-goxs5d7fi3`
+   - Analytics Claude: `g-ryb6suoa69`
+   - SPARQL: FSS Ontology endpoint
+
+3. **Amazon DynamoDB**
+   - OCR Storage: `ship-firefighting-ocr`
 
 3. **Amazon S3**
    - Document storage

@@ -96,25 +96,33 @@ class DataSchemaExplorer:
         **국제 해양 규정 체계 기반 도메인 모델링:**
         """)
         
-        st.markdown("### 📄 국제 규정 문서 체계")
+        st.markdown("### 📄 실제 11개 문서 목록")
         st.code("""
-# 국제 해양 규정 계층 구조 (11개 문서)
-- IMO 국제 규정: SOLAS, FSS Code, FTP Code
-- 선급 규정: ABS Rules, DNV Rules
-- 국가별 규정: USCG, MCA 가이드라인
-- 기술 표준: ISO, IEC 표준
-- 업계 모범사례: OCIMF, SIGTTO 가이드
+# 실제 Knowledge Base 문서 (11개)
+1. FSS 합본 - 국제 화재 안전 시스템 코드
+2. SOLAS Chapter II-2 - 해상인명안전협약 화재 방호
+3. SOLAS 2017 Insulation penetration - 단열재 관통 규정
+4. IGC Code - 국제 가스 운반선 코드
+5. DNV-RU-SHIP Pt4 Ch6 - DNV 선급 규칙 Part 4 Chapter 6
+6. DNV-RU-SHIP Pt6 Ch5 Sec4 - DNV 선급 규칙 Part 6 Chapter 5 Section 4
+7. Design guidance_Support - 설계 가이드 지지 구조
+8. Design guidance_Spoolcutting - 설계 가이드 스풀 절단
+9. Design guidance_hull penetration - 설계 가이드 선체 관통부
+10. Piping practice_Support - 배관 실무 지지 구조
+11. Piping practice_hull penetration - 배관 실무 선체 관통부
         """, language="text")
         
         st.markdown("### 📚 전문 용어 추출 방법론")
         st.code("""
-# 키워드 기반 엔티티 분류 (실제 데이터)
-- 탱크 관련 (144개): tank top, cargo tank
-- 파이프 시스템 (127개): pipe, sampling pipes  
-- 화재 안전 (121개): fire safety systems
-- 규정/챕터 (126개): SOLAS chapter, FSS code
-- 밸브 시스템 (59개): relief valves, ESD valves
-- 펌프 시스템 (56개): fire pumps, sprinkler pump
+# 키워드 기반 엔티티 분류 (실제 Neptune Analytics 데이터)
+- 시스템 관련 (224개): insulation system, containment system, membrane cargo containment systems
+- 규정/챕터 (206개): chapter 19, chapter 9, SOLAS chapter, FSS code
+- 파이프 시스템 (141개): pipe insulation, pipe spacing, longitudinally welded pipes
+- 탱크 관련 (139개): cargo tank shell, semi-membrane tank, spherical tank construction
+- 화재 안전 (109개): fire pumps, fire main, fire detection, firefighting systems
+- 밸브 시스템 (72개): pressure relief valve, cargo tank valves, emergency shutdown valves
+- 펌프 시스템 (59개): fire pumps, pump housings, circulating pumps, cargo pump rooms
+- 안전 시스템 (23개): fire safety systems code, international code for fire safety systems
         """, language="text")
         
 
@@ -168,25 +176,25 @@ class DataSchemaExplorer:
         st.markdown("### 💡 CO2 시스템 압력 규정 검색")
         
         st.code("""
-질문: "CO2 시스템의 압력 규정은?"
+질문: "파이프 절연 요구사항은?"
 
 1️⃣ Entity 매칭:
-   - "CO2System", "pressure", "regulation", "chapter 5"
+   - "pipe insulation", "pipe spacing", "insulation system"
 
 2️⃣ Neptune Analytics 검색:
-   - FSS Chapter 5 관련 청크들
-   - CO2 압력 사양 청크들 (CONTAINS 관계)
+   - 파이프 절연 관련 청크들
+   - 절연 시스템 사양 청크들 (CONTAINS 관계)
 
 3️⃣ Document 추적:
-   - FSS 합본.pdf (FROM 관계)
-   - SOLAS Chapter II-2.pdf
+   - Design guidance_Support.pdf (FROM 관계)
+   - Piping practice_Support.pdf
 
 4️⃣ Cohere Reranking:
    - 관련성 점수 기반 재정렬
    - 상위 5개 청크 선별
 
 5️⃣ 응답 생성:
-   "CO2 시스템은 15 bar 압력으로 설계되며..."
+   "파이프 절연은 화재 등급에 따라 A-60 기준으로..."
    + 참조 문서 메타데이터 포함
         """, language="text")
         
@@ -305,18 +313,19 @@ class DataSchemaExplorer:
         st.markdown("## 📄 Documents")
         st.markdown("**선박 소방 규정 관련 11개 문서**")
         
+        # Plan-Execute Agent에서 실제 사용하는 11개 문서
         documents = [
-            {"번호": "1", "문서명": "FSS 합본", "설명": "국제 화재 안전 시스템 코드 (Fire Safety Systems Code)"},
-            {"번호": "2", "문서명": "SOLAS Chapter II-2", "설명": "해상인명안전협약 - 구조, 화재 방호, 화재 탐지 및 소화"},
-            {"번호": "3", "문서명": "SOLAS 2017 Insulation penetration", "설명": "SOLAS 단열재 관통 규정"},
-            {"번호": "4", "문서명": "IGC Code", "설명": "국제 가스 운반선 코드 (International Gas Carrier Code)"},
-            {"번호": "5", "문서명": "DNV-RU-SHIP Pt4 Ch6", "설명": "DNV 선급 규칙 - Part 4 Chapter 6"},
-            {"번호": "6", "문서명": "DNV-RU-SHIP Pt6 Ch5 Sec4", "설명": "DNV 선급 규칙 - Part 6 Chapter 5 Section 4"},
-            {"번호": "7", "문서명": "Design guidance_Support", "설명": "설계 가이드 - 지지 구조"},
-            {"번호": "8", "문서명": "Design guidance_Spoolcutting", "설명": "설계 가이드 - 스풀 절단"},
-            {"번호": "9", "문서명": "Design guidance_hull penetration", "설명": "설계 가이드 - 선체 관통부"},
-            {"번호": "10", "문서명": "Piping practice_Support", "설명": "배관 실무 - 지지 구조"},
-            {"번호": "11", "문서명": "Piping practice_hull penetration", "설명": "배관 실무 - 선체 관통부"}
+            {"번호": "1", "문서명": "DNV-RU-SHIP-Pt4 Ch6", "설명": "DNV 선급 규칙 - Fire Safety Systems"},
+            {"번호": "2", "문서명": "DNV-RU-SHIP-Pt6 Ch5 Sec4", "설명": "DNV 선급 규칙 - Safety Equipment"},
+            {"번호": "3", "문서명": "Design guidance - Spoolcutting", "설명": "설계 가이드 - 스풀 절단"},
+            {"번호": "4", "문서명": "Design guidance - Support Systems", "설명": "설계 가이드 - 지지 시스템"},
+            {"번호": "5", "문서명": "Design guidance - Hull Penetration", "설명": "설계 가이드 - 선체 관통부"},
+            {"번호": "6", "문서명": "SOLAS Chapter II-2", "설명": "해상인명안전협약 - Fire Protection & Detection"},
+            {"번호": "7", "문서명": "FSS Code", "설명": "국제 화재 안전 시스템 코드"},
+            {"번호": "8", "문서명": "IGC Code", "설명": "국제 가스 운반선 안전 코드"},
+            {"번호": "9", "문서명": "SOLAS Insulation Penetration Guidelines", "설명": "SOLAS 단열재 관통 가이드라인"},
+            {"번호": "10", "문서명": "Piping Practice - Support Systems", "설명": "배관 실무 - 지지 시스템"},
+            {"번호": "11", "문서명": "Piping Practice - Hull Penetration", "설명": "배관 실무 - 선체 관통부"}
         ]
         
         df_docs = pd.DataFrame(documents)
@@ -372,21 +381,17 @@ class DataSchemaExplorer:
             """)
             
             st.markdown("""
-            **키워드 기반 분류 결과:**
-            - **탱크 관련 (144개)**: tank top, tank boundaries, single hull tanker, tank deck, oil fuel tanks 등
-            - **파이프 시스템 (127개)**: pipe, stainless steel pipe, sampling pipes, sample pipes, pipe tunnel 등
-            - **화물 시스템 (126개)**: cargo oil lines, main cargo control spaces, deck cargo 등
-            - **규정/챕터 (126개)**: chapter 2, chapter 4, solas chapter ii-2, fss code 등
-            - **화재 안전 (121개)**: fire safety systems code, fire condition, fire detection and fire alarm system 등
-            - **규정 (100개)**: regulation ii-2/10.9.1.2, solas regulation ii-2/10.6.4, gas regulation valves 등
-            - **물/수계통 (83개)**: watertight bulkhead, seawater pump, water spray nozzle, sliding watertight doors 등
-            - **선실/공간 (70개)**: s/g room (steam generator room), air condition room, engine-room, pump-rooms 등
-            - **데크/갑판 (59개)**: upper deck casing, upper deck, 3rd deck, embarkation deck, helideck 등
-            - **밸브 시스템 (59개)**: relief valves, gas regulation valves, excess flow valve, esd valves 등
-            - **펌프 시스템 (56개)**: seawater pump, fire pumps, pump-rooms, pump, sprinkler pump 등
-            - **강철/재료 (45개)**: stainless steel pipe, steel, steel enclosure, carbon manganese steels 등
-            - **포말 시스템 (29개)**: foam, foam generator, helicopter facility foam firefighting appliances 등
-            - **엔진/기계 (26개)**: engine-room, engine power, engines, engine casing, internal combustion engine 등
+            **실제 Neptune Analytics 키워드 기반 분류 결과:**
+            - **시스템 관련 (224개)**: insulation system, containment system, membrane cargo containment systems, gas fuel piping systems, vent piping system 등
+            - **규정/챕터 (206개)**: chapter 19, chapter 9, chapter, part 4 chapter 6 section 1, SOLAS chapter ii-2, FSS code 등
+            - **파이프 시스템 (141개)**: pipe insulation, pipe spacing, pipe lengths, longitudinally welded pipes, seamless pipes 등
+            - **탱크 관련 (139개)**: cargo tank shell, semi-membrane tank, spherical tank construction, pressure type tank, gas tanker 등
+            - **화재 안전 (109개)**: fire pumps, fire main, fire detection, firefighting systems, fire safety systems code 등
+            - **밸브 시스템 (72개)**: pressure relief valve, relief valve, cargo tank valves, emergency shutdown valves, PRV 등
+            - **펌프 시스템 (59개)**: fire pumps, pump housings, circulating pumps, thermal oil circulation pumps, cargo pump rooms 등
+            - **안전 시스템 (23개)**: fire safety systems code, international code for fire safety systems, fire safety systems 등
+            
+            **참고**: 총 5,010개 엔티티 중 키워드 매칭된 항목만 표시. 실제 Neptune Analytics에서 2024년 11월 확인된 데이터입니다.
             """)
         
         with tab3:

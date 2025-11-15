@@ -17,8 +17,12 @@ def get_neptune_graph_data():
         
         # 노드 쿼리 (최대 2000개) - openCypher
         nodes_query = "MATCH (n) RETURN id(n) as id, labels(n) as labels, properties(n) as properties LIMIT 2000"
+        # 환경변수에서 BDA Neptune Graph ID 가져오기 (기본 그래프)
+        import os
+        graph_id = os.getenv('NEPTUNE_BDA_GRAPH_ID', 'g-goxs5d7fi3')
+        
         nodes_response = neptune_client.execute_query(
-            graphIdentifier='g-gqisj8edd6',
+            graphIdentifier=graph_id,
             queryString=nodes_query,
             language='OPEN_CYPHER'
         )
@@ -26,7 +30,7 @@ def get_neptune_graph_data():
         # 엣지 쿼리 (최대 3000개) - openCypher
         edges_query = "MATCH (a)-[r]->(b) RETURN id(r) as id, type(r) as label, id(a) as source, id(b) as target LIMIT 3000"
         edges_response = neptune_client.execute_query(
-            graphIdentifier='g-gqisj8edd6',
+            graphIdentifier=graph_id,
             queryString=edges_query,
             language='OPEN_CYPHER'
         )
