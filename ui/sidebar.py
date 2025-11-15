@@ -20,8 +20,6 @@ class Sidebar:
         st.markdown("---")
         self._render_graph_selector()
         st.markdown("---")
-        self._render_current_agent_info()
-        st.markdown("---")
         self._render_session_controls()
     
     def _render_data_schema_button(self):
@@ -38,7 +36,7 @@ class Sidebar:
     
     def _render_agent_selector(self):
         """에이전트 선택"""
-        st.markdown("### 🤖 에이전트 선택")
+#        st.markdown("### 🤖 에이전트 선택")
         
         available_agents = self.agent_manager.get_available_agents()
         
@@ -121,7 +119,7 @@ class Sidebar:
         graph_options = [
             "선택 안함",
             "📚 GraphRAG(bda+neptune)",
-            "🔥 GraphRAG(claude+neptune)",
+            "⚡ GraphRAG(claude+neptune)",
             "🔥 FSS GraphDB"
         ]
         
@@ -147,6 +145,9 @@ class Sidebar:
         if current_show != new_show or current_type != new_type:
             st.session_state.show_knowledge_graph = new_show
             st.session_state.selected_graph_type = new_type
+            # 지식 그래프 선택 시 데이터 스키마 비활성화
+            if new_show:
+                st.session_state.show_data_schema = False
             st.rerun()
     
     def _render_current_agent_info(self):

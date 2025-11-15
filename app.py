@@ -65,85 +65,9 @@ def main():
             schema_explorer.render_schema_explorer()
         except Exception as e:
             st.error(f"데이터 스키마 로드 실패: {e}")
-        
-
-    
-    # 채팅 인터페이스 (지식 그래프나 데이터 스키마가 표시되지 않을 때만)
-    elif not st.session_state.get('show_knowledge_graph', False):
-        # 사이드바에서 선택된 에이전트 사용 (기본값: firefighting)
-        selected_agent = st.session_state.get('selected_agent', 'firefighting')
-        selected_kb_id = st.session_state.get('selected_kb_id')
-        
-        # 에이전트나 KB 변경 감지 및 채팅 초기화
-        if (st.session_state.previous_agent != selected_agent or 
-            st.session_state.previous_kb_id != selected_kb_id):
-            st.session_state.messages = []
-            st.session_state.session_id = str(uuid.uuid4())
-            st.session_state.previous_agent = selected_agent
-            st.session_state.previous_kb_id = selected_kb_id
-            st.rerun()
-        
-        # 채팅 인터페이스
-        ui_components['chat_interface'].render_chat_history()
-        
-        # 사용자 입력 처리
-        if prompt := st.chat_input("질문을 입력하세요..."):
-            # 사용자 메시지 추가
-            st.session_state.messages.append({
-                "role": "user", 
-                "content": prompt,
-                "agent": selected_agent
-            })
-            
-            # 채팅 메시지 표시
-            with st.chat_message("user"):
-                st.markdown(prompt)
-            
-            # AI 응답 생성
-            with st.chat_message("assistant"):
-                with st.spinner("답변을 생성하고 있습니다..."):
-                    # 선택된 에이전트로 메시지 라우팅 (KB ID 포함)
-                    # st.write(f"🔍 디버그: selected_agent = {selected_agent}")
-                    # st.write(f"🔍 디버그: selected_kb_id = {selected_kb_id}")
-                    result = agent_manager.route_message(
-                        selected_agent, 
-                        prompt, 
-                        st.session_state.session_id,
-                        kb_id=selected_kb_id
-                    )
-                    # st.write(f"🔍 디버그: route_message 결과 = {result.get('success')}")
-                    
-                    # 에이전트 정보 표시
-                    agent_config = next((a for a in agent_manager.get_available_agents() if a.name == selected_agent), None)
-                    if agent_config:
-                        icon = agent_config.ui_config.get('icon', '🤖') if agent_config.ui_config else '🤖'
-                        st.caption(f"{icon} {agent_config.display_name} 사용 중")
-                    
-                    if result.get("success"):
-                        # 응답 표시
-                        st.markdown(result["content"])
-                        
-                        # 참조 정보 표시
-                        references = result.get("references", [])
-                        # st.write(f"🔍 디버그: 참조 개수 = {len(references)}")
-                        if references:
-                            # st.write(f"🔍 디버그: 첫 번째 참조 키 = {list(references[0].keys())}")
-                            ui_components['reference_display'].render_references(references)
-                        # else:
-                            # st.write("🔍 디버그: 참조 없음")
-                        
-                        # 세션에 저장
-                        st.session_state.messages.append({
-                            "role": "assistant",
-                            "content": result["content"],
-                            "references": references,
-                            "agent": selected_agent
-                        })
-                    else:
-                        st.error(f"오류: {result.get('error', '알 수 없는 오류')}")
     
     # 지식 그래프 표시
-    if st.session_state.get('show_knowledge_graph', False):
+    elif st.session_state.get('show_knowledge_graph', False):
         selected_graph_type = st.session_state.get('selected_graph_type', '🕸️ GraphRAG')
         
         st.markdown("---")
@@ -232,6 +156,81 @@ def main():
                     st.session_state.show_knowledge_graph = False
                     st.session_state.selected_graph_type = None
                     st.rerun()
+    
+    # 채팅 인터페이스 (지식 그래프나 데이터 스키마가 표시되지 않을 때만)
+    else:
+        # 사이드바에서 선택된 에이전트 사용 (기본값: firefighting)
+        selected_agent = st.session_state.get('selected_agent', 'firefighting')
+        selected_kb_id = st.session_state.get('selected_kb_id')
+        
+        # 에이전트나 KB 변경 감지 및 채팅 초기화
+        if (st.session_state.previous_agent != selected_agent or 
+            st.session_state.previous_kb_id != selected_kb_id):
+            st.session_state.messages = []
+            st.session_state.session_id = str(uuid.uuid4())
+            st.session_state.previous_agent = selected_agent
+            st.session_state.previous_kb_id = selected_kb_id
+            st.rerun()
+        
+        # 채팅 인터페이스
+        ui_components['chat_interface'].render_chat_history()
+        
+        # 사용자 입력 처리
+        if prompt := st.chat_input("질문을 입력하세요..."):
+            # 사용자 메시지 추가
+            st.session_state.messages.append({
+                "role": "user", 
+                "content": prompt,
+                "agent": selected_agent
+            })
+            
+            # 채팅 메시지 표시
+            with st.chat_message("user"):
+                st.markdown(prompt)
+            
+            # AI 응답 생성
+            with st.chat_message("assistant"):
+                with st.spinner("답변을 생성하고 있습니다..."):
+                    # 선택된 에이전트로 메시지 라우팅 (KB ID 포함)
+                    # st.write(f"🔍 디버그: selected_agent = {selected_agent}")
+                    # st.write(f"🔍 디버그: selected_kb_id = {selected_kb_id}")
+                    result = agent_manager.route_message(
+                        selected_agent, 
+                        prompt, 
+                        st.session_state.session_id,
+                        kb_id=selected_kb_id
+                    )
+                    # st.write(f"🔍 디버그: route_message 결과 = {result.get('success')}")
+                    
+                    # 에이전트 정보 표시
+                    agent_config = next((a for a in agent_manager.get_available_agents() if a.name == selected_agent), None)
+                    if agent_config:
+                        icon = agent_config.ui_config.get('icon', '🤖') if agent_config.ui_config else '🤖'
+                        st.caption(f"{icon} {agent_config.display_name} 사용 중")
+                    
+                    if result.get("success"):
+                        # 응답 표시
+                        st.markdown(result["content"])
+                        
+                        # 참조 정보 표시
+                        references = result.get("references", [])
+                        # st.write(f"🔍 디버그: 참조 개수 = {len(references)}")
+                        if references:
+                            # st.write(f"🔍 디버그: 첫 번째 참조 키 = {list(references[0].keys())}")
+                            ui_components['reference_display'].render_references(references)
+                        # else:
+                            # st.write("🔍 디버그: 참조 없음")
+                        
+                        # 세션에 저장
+                        st.session_state.messages.append({
+                            "role": "assistant",
+                            "content": result["content"],
+                            "references": references,
+                            "agent": selected_agent
+                        })
+                    else:
+                        st.error(f"오류: {result.get('error', '알 수 없는 오류')}")
+
     
     # 사이드바
     with st.sidebar:
